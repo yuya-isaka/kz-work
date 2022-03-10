@@ -1,0 +1,10 @@
+/tools
+
+/src/kzload
+/src/kzload.elf
+/src/kzload.mot
+/src/lib.o
+/src/main.o
+/src/serial.o
+/src/startup.o
+/src/vector.o

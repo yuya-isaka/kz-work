@@ -1,0 +1,77 @@
+// 割り込みベクタの設定
+
+#include "defines.h"
+
+// H8が一番最初に実行開始する関数
+extern void start(void); // スタートアップ
+
+// 割り込みベクタ
+// リンカスクリプトの定義で先頭番地に配置する
+
+// 関数へのポインタの配列
+void (*vectors[])(void) = {
+	start, // start() へのポインタ 一番最初に実行開始するアドレス 「リセットベクタ」とも呼ばれる
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+};
