@@ -3,8 +3,10 @@
 #include "serial.h"
 #include "lib.h"
 
+// ファームウェア生成
 int main(void)
 {
+	// SCIのレジスタをデータ長を8ビット，ストップビット長を1,パリティ無しで初期化
 	serial_init(SERIAL_DEFAULT_DEVICE);
 
 	puts("Hello World!\n");
