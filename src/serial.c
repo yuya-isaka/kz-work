@@ -29,6 +29,7 @@
 
 // SCIの定義
 // 先頭アドレス
+// 構造体でキャスト，　0xffffb0というアドレスをh8_3069f_sciという構造体でキャスト -> メモリマップドIOで周辺コントローラのレジスタ経由でアクセスするとき，　そのレジスタを直接扱うことはできない．　からキャストとかポインタに代入したりして扱う必要がある
 #define H8_3069F_SCI0 ((volatile struct h8_3069f_sci *)0xffffb0)
 #define H8_3069F_SCI1 ((volatile struct h8_3069f_sci *)0xffffb8) // シリアルコネクタは1
 #define H8_3069F_SCI2 ((volatile struct h8_3069f_sci *)0xffffc0)
@@ -86,6 +87,8 @@ struct h8_3069f_sci
 #define H8_3069F_SCI_SSR_RDRF (1 << 6) // 受信完了
 #define H8_3069F_SCI_SSR_TDRE (1 << 7) // 送信完了
 
+// -> reg[].sci でアクセスできるのを作成
+// -> その配列の中に「構造体でキャストしたアドレス」を格納
 static struct
 {
 	volatile struct h8_3069f_sci *sci;
@@ -99,7 +102,7 @@ static struct
 		SCMR
 	*/
 } regs[SERIAL_SCI_NUM] = {
-	{H8_3069F_SCI0}, // SCI0の先頭アドレス
+	{H8_3069F_SCI0}, // <- h8_3069f_sci構造体(sciと同じ構造)だったら入る
 	{H8_3069F_SCI1}, // SCI1の先頭アドレス
 	{H8_3069F_SCI2}, // SCI2の先頭アドレス
 };
