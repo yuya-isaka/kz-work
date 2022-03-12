@@ -66,6 +66,7 @@ char *strcpy(char *dst, const char *src)
 		if (!*src)
 			break;
 	}
+	return d;
 }
 
 // 文字列の比較

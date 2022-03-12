@@ -14,10 +14,11 @@ OBJDUMP = $(BINDIR)/$(ADDNAME)objdump
 RANLIB = $(BINDIR)/$(ADDNAME)ranlib
 STRIP = $(BINDIR)/$(ADDNAME)strip
 
-H8WRITE = ../tools/PackgeFiles/src/kz_h8write
+H8WRITE = ../tools/PackageFiles/src/kz_h8write
 
+#シリアル接続先
 # Linux(USB): /dev/ttyUSBx
-H8WRITE_SERDEV = /dev/ttyUSB0 #シリアル接続先
+H8WRITE_SERDEV = /dev/ttyUSB0
 
 # コンパイルするソース軍
 OBJS = vector.o startup.o main.o
