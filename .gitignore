@@ -2,11 +2,11 @@
 
 /tools
 
-/src/kzload
-/src/kzload.elf
-/src/kzload.mot
-/src/lib.o
-/src/main.o
-/src/serial.o
-/src/startup.o
-/src/vector.o
+/*/kzload
+/*/kzload.elf
+/*/kzload.mot
+/*/lib.o
+/*/main.o
+/*/serial.o
+/*/startup.o
+/*/vector.o
