@@ -135,7 +135,7 @@ int serial_init(int index)
 	return 0;
 }
 
-// 送信可能か？
+// 受信した？
 int serial_is_send_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
@@ -168,12 +168,13 @@ int serial_send_byte(int index, unsigned char c)
 	return 0;
 }
 
-// 受信可能か？
+// 送信された？
 int serial_is_recv_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
 
 	// sci->ssrレジスタの持つ受信完了ビットを監視
+	// 送信されたらビットがたつ
 	return (sci->ssr & H8_3069F_SCI_SSR_RDRF);
 }
 
