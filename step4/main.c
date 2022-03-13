@@ -125,7 +125,7 @@ int main(void)
 	// initした後にグローバル変数は使える
 	init();
 
-	while (1)
+	for (;;)
 	{
 		puts("kzload> ");
 		// 端末変換した結果をbufに格納

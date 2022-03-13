@@ -94,7 +94,7 @@ long xmodem_recv(char *buf)
 	long size = 0;
 	unsigned char c, block_number = 1;
 
-	while (1)
+	for (;;)
 	{
 		// 一度送信されたら値が続いてくる
 		if (!receiving)

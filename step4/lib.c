@@ -51,8 +51,8 @@ int memcmp(const void *b1, const void *b2, long len)
 int strlen(const char *s)
 {
 	int len;
-	for (len = 0; *s; s++, len++)
-		;
+	for (len = 0; *s; s++)
+		len++;
 	return len;
 }
 
@@ -60,16 +60,19 @@ int strlen(const char *s)
 char *strcpy(char *dst, const char *src)
 {
 	char *d = dst;
-	for (;; dst++, src++)
+	for (;;)
 	{
 		*dst = *src;
 		if (!*src)
 			break;
+		dst++;
+		src++;
 	}
+	// 新しいポインタを返す
 	return d;
 }
 
-// 文字列の比較
+// 文字列の比較 (一緒だったら０、左＞右は１，左＜右は-1)
 int strcmp(const char *s1, const char *s2)
 {
 	while (*s1 || *s2)
@@ -95,6 +98,8 @@ int strncmp(const char *s1, const char *s2, int len)
 	}
 	return 0;
 }
+
+// 入出力--------------------------------------------------------------------
 
 // 1文字送信
 // コンソールへの文字出力関数 (コンソールへの出力はこいつを呼び出せば良くなった)
