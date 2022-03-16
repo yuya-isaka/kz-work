@@ -97,32 +97,20 @@ static int elf_load_program(struct elf_header *header)
 			continue;
 
 		// とりあえず実験用に，実際にロードせずにセグメント情報を表示する
-		// putxval(phdr->offset, 6);
-		// puts(" ");
-		// putxval(phdr->virtual_addr, 8);
-		// puts(" ");
-		// putxval(phdr->physical_addr, 8);
-		// puts(" ");
-		// putxval(phdr->file_size, 5);
-		// puts(" ");
-		// putxval(phdr->memory_size, 5);
-		// puts(" ");
-		// putxval(phdr->flags, 2);
-		// puts(" ");
-		// putxval(phdr->align, 2);
-		// puts(" ");
-
-		// VA == PA なのでどっちでもいい
-		// 実行ファイル（ELF形式）をセグメント単位で物理メモリ上にコピー
-		// 物理アドレス = プログラムヘッダアドレス + 各セグメントまでのオフセット (セグメントのサイズ分)
-		memcpy((char *)phdr->physical_addr, (char *)header + phdr->offset, phdr->file_size);
-
-		// BSS領域は，メモリ上に展開はされるが実行形式ファイル上ではサイズがゼロになっている．（サイズ情報だけを持つ）そのため，「ファイル中のサイズ != メモリ上のサイズ」となる場合がある．
-		// また，サイズ節約のためにセグメント単位で圧縮処理が行われているときは，「ファイル中のサイズ != メモリ上のサイズ」となる．
-		// ファイルサイズがメモリサイズに満たない場合，余った領域をゼロクリア
-		// （物理アドレス＋ファイルサイズ）のアドレスから余った領域をゼロクリア
-		// ゼロクリア ... 多くの場合，「値のゼロ・ NULLポインタ」はメモリ上のバイトパターンもゼロ -> 「初期化なしの変数はゼロ，ポインタの場合はNULLポインタ」として初期化できる．
-		memset((char *)phdr->physical_addr + phdr->file_size, 0, phdr->memory_size - phdr->file_size);
+		putxval(phdr->offset, 6);
+		puts(" ");
+		putxval(phdr->virtual_addr, 8);
+		puts(" ");
+		putxval(phdr->physical_addr, 8);
+		puts(" ");
+		putxval(phdr->file_size, 5);
+		puts(" ");
+		putxval(phdr->memory_size, 5);
+		puts(" ");
+		putxval(phdr->flags, 2);
+		puts(" ");
+		putxval(phdr->align, 2);
+		puts(" ");
 	}
 
 	return 0;
