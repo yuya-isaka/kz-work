@@ -123,6 +123,9 @@ int main(void)
 	// 普通はRAMの先頭からプログラムを始めるものだから，　ロードは後ろの方に入れておく
 	extern int buffer_start;
 
+	char *entry_point;
+	void (*f)(void); // 関数へのポインタ
+
 	// initした後にグローバル変数は使える
 	init();
 
@@ -162,8 +165,20 @@ int main(void)
 		// run (ELF形式ファイルの実行)
 		else if (!strcmp(buf, "run"))
 		{
-			// メモリ上に展開
-			elf_load(loadbuf);
+			entry_point = elf_load(loadbuf); // ロードしてきたプログラムのエントリーポイントget
+			if (!entry_point) // ここではアドレス自体に興味がある．アドレスの先のプログラムはこの後実行される処理がある
+			{
+				puts("run error!\n");
+			}
+			else
+			{
+				puts("starting from entry point: ");
+				putxval((unsigned long)entry_point, 0);
+				puts("\n");
+				f = (void (*)(void))entry_point; // 関数へのポインタにキャストして代入
+				f(); // ロードしたプログラムを実行（処理を渡す）
+				// ここにはもう戻ってこない．．そして誰もいなくなった．．（ロードしたプログラムからリターンしたなら別）
+			}
 		}
 		// 該当なし
 		else
