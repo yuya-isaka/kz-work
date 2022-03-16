@@ -27,7 +27,7 @@ static int init(void)
 
 	// データ領域とBSS領域を初期化（　この処理以降でないとグローバル変数が初期化されていない ので　利用するのはこの後）
 	// シンボルのアドレスをポインタ参照することで, C言語のプログラム側から扱える
-	memcpy(&data_start, &erodata, (long)&edata - (long)&data_start); // ROMの.dataをRAMの.dataに移動
+	memcpy(&data_start, &erodata, (long)&edata - (long)&data_start); // ROMの.dataをRAMの.dataに移動, VA!=PA対策
 	memset(&bss_start, 0, (long)&ebss - (long)&bss_start);			 // ゼロクリア
 
 	// シリアルの初期化
