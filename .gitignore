@@ -4,6 +4,8 @@
 /tools
 
 # できあがる実行形式ファイル一覧
+kozos
+kozos.elf
 kzload
 kzload.elf
 kzload.mot
