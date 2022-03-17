@@ -1,12 +1,16 @@
 .DS_Store
 
+# gcc-3.4.6, binutils-2.27, kz_h8write
 /tools
 
-/*/kzload
-/*/kzload.elf
-/*/kzload.mot
-/*/lib.o
-/*/main.o
-/*/serial.o
-/*/startup.o
-/*/vector.o
+# できあがる実行形式ファイル一覧
+kzload
+kzload.elf
+kzload.mot
+lib.o
+main.o
+serial.o
+startup.o
+vector.o
+xmodem.o
+elf.o
