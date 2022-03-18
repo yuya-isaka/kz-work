@@ -29,6 +29,7 @@ typedef void (*softvec_handler_t)(softvec_type_t type, unsigned long sp);
 // ソフトウェア・割込みベクタの位置
 // アドレスをキャストすると，アドレスの場所にキャストした型が用意される？？
 // ここではキャストした型は，関数へのポインタだから，SOFTVECSには関数へのポインタを入れられる．
+// アドレスはポインタ変数経由でアクセスしたい
 #define SOFTVECS ((softvec_handler_t *)SOFTVEC_ADDR)
 // 割込み有効化
 // インラインアセンブラ（C言語のプログラム中でのアセンブラの記述をかのうにするためのもの）

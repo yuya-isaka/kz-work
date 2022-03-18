@@ -15,7 +15,7 @@ RANLIB = $(BINDIR)/$(ADDNAME)ranlib
 STRIP = $(BINDIR)/$(ADDNAME)strip
 
 # コンパイルするソース軍
-OBJS = startup.o main.o
+OBJS = startup.o main.o interrupt.o
 OBJS += lib.o serial.o
 
 # 生成する実行形式のファイル名
@@ -39,8 +39,10 @@ CFLAGS += -DKOZOS
 # 全て静的リンクする，リンカスクリプトを指定する，ライブラリの検索先を指定する
 LFLAGS = -static -T ld.scr -L.
 
+# ビルドルール
 .SUFFIXES: .c .o
 .SUFFIXES: .s .o
+.SUFFIXES: .S .o
 
 all:	$(TARGET)
 
@@ -56,6 +58,9 @@ $(TARGET):	$(OBJS)
 
 # アセンブラファイルのアセンブルルール
 .s.o:		$<
+			$(CC) -c $(CFLAGS) $<
+
+.S.o:		$<
 			$(CC) -c $(CFLAGS) $<
 
 # ファイルの削除

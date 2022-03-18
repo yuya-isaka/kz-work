@@ -197,3 +197,51 @@ unsigned char serial_recv_byte(int index)
 
 	return c;
 }
+
+// 送信割込み有効か？
+int serial_intr_is_send_enable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	return (sci->scr & H8_3069F_SCI_SCR_TIE ? 1 : 0); // SCRのTIEビットを返す
+}
+
+// 送信割込み有効か
+void serial_intr_send_enable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	sci->scr |= H8_3069F_SCI_SCR_TIE; // SCRのTIEビットを立てる
+}
+
+// 送信割込み無効化
+void serial_intr_send_disable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	sci->scr &= ~H8_3069F_SCI_SCR_TIE; // SCRのTIEビットを落とす
+}
+
+// 受信割込み有効か？
+int serial_intr_is_recv_enable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	return (sci->scr & H8_3069F_SCI_SCR_RIE ? 1 : 0); // SCRのRIEビットを返す
+}
+
+// 受信割込み有効か
+void serial_intr_recv_enable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	sci->scr |= H8_3069F_SCI_SCR_RIE; // SCRのRIEビットを立てる
+}
+
+// 受信割込み無効化
+void serial_intr_recv_disable(int index)
+{
+	volatile struct h8_3069f_sci *sci = regs[index].sci;
+
+	sci->scr &= ~H8_3069F_SCI_SCR_RIE; // SCRのRIEビットを落とす
+}

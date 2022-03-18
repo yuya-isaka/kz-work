@@ -33,7 +33,7 @@
 
 // H8が一番最初に実行開始する関数
 // extern ... 関数のプロトタイプ宣言
-extern void start(void); // スタートアップ
+extern void start(void);		// スタートアップ
 extern void intr_softerr(void); // ソフトウェアエラー（トラップ割込み）
 extern void intr_syscall(void); // システムコール（トラップ割込み）
 extern void intr_serintr(void); // シリアル割込み
@@ -46,6 +46,7 @@ extern void intr_serintr(void); // シリアル割込み
 // 割込みベクタは，　割込みハンドラを指すアドレスのこと
 // 割込みハンドラは， 処理を書いた関数
 // -> vectors[] は，　割込みハンドラ関数のアドレスを格納している（割込み処理の種類にってハンドラも複数あるから配列）
+// 「　CPUの割り込みベクタの設定　」
 void (*vectors[])(void) = {
 	start, // start() へのポインタ 一番最初に実行開始するアドレス (H8では割込みベクタの先頭がリセット・ベクタになっている，　したがって今はリセットベクタにstart()を設定している)
 	NULL,
@@ -99,7 +100,7 @@ void (*vectors[])(void) = {
 	NULL,
 	NULL,
 	NULL,
-	intr_serintr,
+	intr_serintr, // シリアル関連の割り込みが発生したら，intr_serintr()という関数が呼ばれる -> 実体はintr.Sにある
 	intr_serintr,
 	intr_serintr,
 	intr_serintr,

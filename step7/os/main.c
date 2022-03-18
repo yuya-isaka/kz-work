@@ -1,44 +1,66 @@
 // OS
 
 #include "defines.h"
+#include "intr.h"
+#include "interrupt.h"
 #include "serial.h"
 #include "lib.h"
 
-int main(void)
+// シリアル割込みのハンドラ
+static void intr(softvec_type_t type, unsigned long sp)
 {
+	int c;
 	static char buf[32];
+	static int len;
 
-	puts("Hello World!\n");
+	c = getc();
 
-	for (;;)
+	if (c != '\n') // 受信したのが改行でないならバッファに保存
 	{
-		puts("> ");
-		gets(buf); // コンソールからの１行入力
-
-		if (!strncmp(buf, "echo", 4)) // echoコマンド
+		buf[len++] = c;
+	}
+	else // 改行を受信したらコマンド処理
+	{
+		buf[len++] = '\0';
+		if (!strncmp(buf, "echo", 4))
 		{
-			puts(buf + 4); // 4文字のechoの後続の文字列を表示
+			puts(buf + 4);
 			puts("\n");
 		}
-		else if (!strcmp(buf, "exit")) // exitコマンド
-		{
-			break;
-		}
-		else // 不明
+		else
 		{
 			puts("unknown.\n");
 		}
+		puts("> ");
+		len = 0;
 	}
-
-	return 0;
 }
 
-/*
-下記の処理が不要になり， bootloadと比べてシンプル (init()が消えた)
+int main(void)
+{
+	// 割込み無効化 (初期化するときは無効化しておく)
+	// ブートローダ側で，割り込み無効の状態でOSを起動しているからこれはいらないが，割り込み関連の設定は一応
+	// INTR_DISABLEとINTR_ENABLEで挟むようにする
+	INTR_DISABLE;
 
-	・データ領域のコピー ... 初めからRAM上で動作するから「VA!=PA」の対策が不要
+	puts("kozos boot succeed!\n");
 
-	・BSS領域のクリア ... プログラムのロード時にブート・ローダがBSS領域のクリアを行なってくれるから対策不要　（elf_load_program）
+	// ソフトウェア割込みベクタにシリアル割込みのハンドラを設定
+	softvec_setintr(SOFTVEC_TYPE_SERINTR, intr);
 
-	・シリアル・デバイスの初期化 ... ブート・ローダが実行してくれるから対策不要
-*/
+	// シリアル受信割込みを有効化
+	sefal_intr_recv_enable(SERIAL_DEFAULT_DEVICE);
+
+	puts("> ");
+
+	// 割込み有効化
+	INTR_ENABLE;
+
+	// この後はコンソールで１文字入力するたびに割り込み処理が入って，処理が続けられる
+
+	for (;;)
+	{
+		asm volatile("sleep"); // 省電力モード（組み込みプロセッサは持っている）
+	}
+	return 0;
+}
