@@ -1,0 +1,65 @@
+OUTPUT_FORMAT("elf32-h8300")
+OUTPUT_ARCH(h8300h)
+ENTRY("_start")
+
+MEMORY
+{
+	romall(rx)	: org = 0x000000, len = 0x080000
+	vectors(r)	: org = 0x000000, len = 0x000100
+	rom(rx)		: org = 0x000100, len = 0x07ff00
+
+	ramall(rwx)	: org = 0xffbf20, len = 0x004000
+	softvec(rw)	: org = 0xffbf20, len = 0x000040
+	buffer(rwx) : org = 0xffdf20, len = 0x001d00
+	data(rwx)	: org = 0xfffc20, len = 0x000300
+	stack(rw) 	: org = 0xffff00, len = 0x000000
+}
+
+SECTIONS
+{
+	.vectors : {
+		vector.o(.data)
+	} > vectors
+
+	.text : {
+		_text_start = . ;
+		*(.text)
+		_etext = .;
+	} > rom
+
+	.rodata : {
+		_rodata_start = . ;
+		*(.strings)
+		*(.rodata)
+		*(.rodata.*)
+		_erodata = . ;
+	} > rom
+
+	.softvec : {
+		_softvec = . ;
+	} > softvec
+
+	.buffer : {
+		_buffer_start = . ;
+	} > buffer
+
+	.data : {
+		_data_start = . ;
+		*(.data)
+		_edata = . ;
+	} > data AT> rom
+
+	.bss : {
+		_bss_start = . ;
+		*(.bss)
+		*(COMMON)
+		_ebss = .;
+	} > data AT> rom
+
+	. = ALIGN(4);
+	_end = . ;
+
+	.stack : {
+		_stack = . ;
+	} > stack
+}
