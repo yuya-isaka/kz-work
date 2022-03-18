@@ -1,6 +1,9 @@
 # スタートアップ
+# 拡張子が小文字のSだたら，　プリプロセスが行われない
+
 	.h8300h
 	.section .text
+
 	.global _start
 	.type _start, @function
 
