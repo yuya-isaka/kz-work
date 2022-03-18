@@ -1,5 +1,6 @@
 // main()関数
 #include "defines.h"
+#include "interrupt.h"
 #include "serial.h"
 #include "xmodem.h"
 #include "lib.h"
@@ -29,6 +30,9 @@ static int init(void)
 	// シンボルのアドレスをポインタ参照することで, C言語のプログラム側から扱える
 	memcpy(&data_start, &erodata, (long)&edata - (long)&data_start); // ROMの.dataをRAMの.dataに移動, VA!=PA対策
 	memset(&bss_start, 0, (long)&ebss - (long)&bss_start);			 // ゼロクリア
+
+	// ソフトウェア割込みベクタを初期化
+	softvec_init();
 
 	// シリアルの初期化
 	// SCIのレジスタをデータ長を8ビット，ストップビット長を1,パリティ無しで初期化
@@ -123,6 +127,11 @@ int main(void)
 	// 普通はRAMの先頭からプログラムを始めるものだから，　ロードは後ろの方に入れておく
 	extern int buffer_start;
 
+	// 割込み無効化のインラインアセンブリを呼ぶ
+	// 最初の初期化処理は，割込み無効の状態で行う
+	// 一応H８のリセット処理は，最初に割込み無効の状態にしてくれているが，念のためにしておく
+	INTR_DISABLE;
+
 	char *entry_point;
 	void (*f)(void); // 関数へのポインタ
 
@@ -166,7 +175,7 @@ int main(void)
 		else if (!strcmp(buf, "run"))
 		{
 			entry_point = elf_load(loadbuf); // ロードしてきたプログラムのエントリーポイントget
-			if (!entry_point) // ここではアドレス自体に興味がある．アドレスの先のプログラムはこの後実行される処理がある
+			if (!entry_point)				 // ここではアドレス自体に興味がある．アドレスの先のプログラムはこの後実行される処理がある
 			{
 				puts("run error!\n");
 			}
@@ -176,8 +185,8 @@ int main(void)
 				putxval((unsigned long)entry_point, 0);
 				puts("\n");
 				f = (void (*)(void))entry_point; // 関数へのポインタにキャストして代入
-				f(); // ロードしたプログラムを実行（処理を渡す）
-				// ここにはもう戻ってこない．．そして誰もいなくなった．．（ロードしたプログラムからリターンしたなら別）
+				f();							 // ロードしたプログラムを実行（処理を渡す）
+												 // ここにはもう戻ってこない．．そして誰もいなくなった．．（ロードしたプログラムからリターンしたなら別）
 			}
 		}
 		// 該当なし

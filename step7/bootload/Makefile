@@ -21,7 +21,7 @@ H8WRITE = ../tools/PackageFiles/src/kz_h8write
 H8WRITE_SERDEV = /dev/ttyUSB0
 
 # コンパイルするソース軍
-OBJS = vector.o startup.o main.o
+OBJS = vector.o startup.o main.o intr.o interrupt.o
 OBJS += lib.o serial.o xmodem.o elf.o
 
 # 生成する実行形式のファイル名
@@ -44,8 +44,10 @@ CFLAGS += -DKZLOAD
 # 全て静的リンクする，リンカスクリプトを指定する，ライブラリの検索先を指定する
 LFLAGS = -static -T ld.scr -L.
 
+# ビルド・ルール
 .SUFFIXES: .c .o
 .SUFFIXES: .s .o
+.SUFFIXES: .S .o
 
 all:	$(TARGET)
 
@@ -61,6 +63,10 @@ $(TARGET):	$(OBJS)
 
 # アセンブラファイルのアセンブルルール
 .s.o:		$<
+			$(CC) -c $(CFLAGS) $<
+
+# ビルドルール
+.S.o:		$<
 			$(CC) -c $(CFLAGS) $<
 
 # モトローラSレコード・フォーマットへの変換ルール

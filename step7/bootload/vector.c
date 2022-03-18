@@ -34,6 +34,9 @@
 // H8が一番最初に実行開始する関数
 // extern ... 関数のプロトタイプ宣言
 extern void start(void); // スタートアップ
+extern void intr_softerr(void); // ソフトウェアエラー（トラップ割込み）
+extern void intr_syscall(void); // システムコール（トラップ割込み）
+extern void intr_serintr(void); // シリアル割込み
 
 // vectors[]の内容は0x000000 - 0x0000ffにないといけない
 // リンカスクリプトの定義で先頭番地に配置する
@@ -52,6 +55,10 @@ void (*vectors[])(void) = {
 	NULL,
 	NULL,
 	NULL,
+	intr_syscall,
+	intr_softerr,
+	intr_softerr,
+	intr_softerr,
 	NULL,
 	NULL,
 	NULL,
@@ -92,20 +99,18 @@ void (*vectors[])(void) = {
 	NULL,
 	NULL,
 	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
+	intr_serintr,
 };
+
+// vector[52] - vectors[63]
