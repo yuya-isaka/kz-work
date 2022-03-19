@@ -46,6 +46,8 @@ int main(void)
 	puts("kozos boot succeed!\n");
 
 	// ソフトウェア割込みベクタにシリアル割込みのハンドラを設定
+	// RAMの先頭に設定するアドレス（OS側の割り込みハンドラのアドレス）をOS側で自由に設定
+	// -> 場所だけ用意されているから，そこにハンドラのポインタアドレスを登録すれば良い
 	softvec_setintr(SOFTVEC_TYPE_SERINTR, intr);
 
 	// シリアル受信割込みを有効化

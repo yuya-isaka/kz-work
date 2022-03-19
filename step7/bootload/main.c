@@ -31,7 +31,7 @@ static int init(void)
 	memcpy(&data_start, &erodata, (long)&edata - (long)&data_start); // ROMの.dataをRAMの.dataに移動, VA!=PA対策
 	memset(&bss_start, 0, (long)&ebss - (long)&bss_start);			 // ゼロクリア
 
-	// ソフトウェア割込みベクタを初期化
+	// ソフトウェア割込みベクタを初期化 (初期化しておきたいから，bootloaderでもリンカスクリプトでRAMの先頭に書いているのか．．)
 	softvec_init();
 
 	// シリアルの初期化
