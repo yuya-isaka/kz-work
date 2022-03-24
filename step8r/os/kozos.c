@@ -124,6 +124,8 @@ static void thread_init(kz_thread *thp)
 	thread_end();
 }
 
+// スレッドの生成
+// 初期スレッドだったら，(starts_thread, "start", 0x100, 0, NULL)
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
 	// 空きのTCBを検索
@@ -143,10 +145,11 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	// TCB設定
 	strcpy(thp->name, name);
 	thp->next = NULL;
-	thp->init.func = func;
+	thp->init.func = func; // スレッドのメイン関数
 	thp->init.argc = argc;
 	thp->init.argv = argv;
 
+	// スタック初期化 (dispatchで呼び出す前の準備)
 	extern char userstack;
 	static char *thread_stack = &userstack;
 	memset(thread_stack, 0, stacksize);
@@ -170,9 +173,11 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	thp->context.sp = (uint32)sp; // dispatchに渡される？
 
 	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す
+				  // システムコールを呼び出したカレントスレッドは，レディーキューから一旦外した状態でシステムコールの処理関数が呼ばれる
+				  // なので，システムコール(kz_run)を呼び出したカレントスレッドを，戻してあげるy必要がある．
 
 	current = thp;
-	putcurrent();
+	putcurrent(); // 新しく作ったスレッドをレディーキューに追加
 
 	return (kz_thread_id_t)current; // アドレスをスレッドIDとして戻す
 }
@@ -188,9 +193,29 @@ static int thread_exit(void)
 
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
-// システムコールの種別に応じた処理が行われる．
-static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
+static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
+}
+
+// 割り込み処理 -------------------------------------------------------------------------------------------------------
+
+static void schedule(void)
+{
+	if (!readyque.head) // 次に実行するスレッドがなかったら終わり
+		kz_sysdown();
+
+	current = readyque.head;
+}
+
+// handler
+// 登録するシステムコール関数
+static void syscall_intr(void)
+{
+	getcurrent(); // システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
+	// KOZOSの設計ではこうなっている
+	// システムコールを呼び出したカレントスレッドは，レディーキューから一旦外した状態でシステムコールの処理関数が呼ばれる
+	kz_syscall_type_t type = current->syscall.type;
+	kz_syscall_param_t *p = current->syscall.param;
 	switch (type)
 	{
 	case KZ_SYSCALL_TYPE_RUN: // kz_run
@@ -204,28 +229,7 @@ static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 	}
 }
 
-static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
-{
-	getcurrent();			// システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
-	call_function(type, p); // システムコールの処理関数呼び出し
-}
-
-// 割り込み処理 -------------------------------------------------------------------------------------------------------
-
-static void schedule(void)
-{
-	if (!readyque.head) // 次に実行するスレッドがなかったら終わり
-		kz_sysdown();
-
-	current = readyque.head;
-}
-
-// 登録するシステムコール関数
-static void syscall_intr(void)
-{
-	syscall_proc(current->syscall.type, current->syscall.param);
-}
-
+// handler
 // 登録するソフトエラー関数
 static void softerr_intr(void)
 {
@@ -238,17 +242,18 @@ static void softerr_intr(void)
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
 	current->context.sp = sp; // カレントスレッドのコンテキストを保存
+	// なぜ保存する？
+	// 割込みを実行したスレッド（current）は，handlers[type]()で，getcurrent()で取り除かれるから，残し解かないとわからなくなる
 
 	if (handlers[type]) // 割込みの種類ごとに処理
 		handlers[type]();
 
 	schedule(); // レディーキューの先頭をカレントスレッドとしてcurrentに代入（ラウンドロビン）
 
+	// scheduleされた新しいスレッドを実行（スレッドはすべて，dispatchによって実行できる形式でthread_runで保存されているという設定）
 	dispatch(&current->context); // カレントスレッドのディスパッチ (引数としてスレッドのコンテキスト情報の領域のアドレス)
 								 // カレンストレッドのスタックポインタ情報を渡しておかないと，割込み処理を実行したあと，どのスタックを用いればよいかわからなくなる
 }
-
-// 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
 
 static int setintr(softvec_type_t type, kz_handler_t handler)
 {
@@ -276,6 +281,7 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
 
+	// 初期スレッドの動作開始
 	dispatch(&current->context);
 }
 
