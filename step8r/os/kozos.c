@@ -118,9 +118,12 @@ static void thread_end(void)
 	kz_exit();
 }
 
+// スレッドの実行関数
 static void thread_init(kz_thread *thp)
 {
+	// スレッドのメイン処理を実行
 	thp->init.func(thp->init.argc, thp->init.argv);
+	// スレッドを終わらせる．
 	thread_end();
 }
 
@@ -175,6 +178,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す
 				  // システムコールを呼び出したカレントスレッドは，レディーキューから一旦外した状態でシステムコールの処理関数が呼ばれる
 				  // なので，システムコール(kz_run)を呼び出したカレントスレッドを，戻してあげるy必要がある．
+				  // kz_start の時は，カレントスレッドはNULLなので特に影響のない処理となる．
 
 	current = thp;
 	putcurrent(); // 新しく作ったスレッドをレディーキューに追加
@@ -183,6 +187,8 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 }
 
 // スレッドを終わらせる
+// kz_exit か ソフトエラー割込みで発生
+// スレッドの終わりで，thread_end()->kz_exit()->thread_exit()という流れで呼ばれる．
 static int thread_exit(void)
 {
 	puts(current->name);
@@ -239,6 +245,7 @@ static void softerr_intr(void)
 	thread_exit(); // スレッド終了
 }
 
+// 割込みがあったら起動する関数
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
 	current->context.sp = sp; // カレントスレッドのコンテキストを保存
@@ -253,6 +260,8 @@ static void thread_intr(softvec_type_t type, unsigned long sp)
 	// scheduleされた新しいスレッドを実行（スレッドはすべて，dispatchによって実行できる形式でthread_runで保存されているという設定）
 	dispatch(&current->context); // カレントスレッドのディスパッチ (引数としてスレッドのコンテキスト情報の領域のアドレス)
 								 // カレンストレッドのスタックポインタ情報を渡しておかないと，割込み処理を実行したあと，どのスタックを用いればよいかわからなくなる
+
+	// ここには返ってこないらしい
 }
 
 static int setintr(softvec_type_t type, kz_handler_t handler)
@@ -279,12 +288,14 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // 1
 	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // 0
 
+	// 新しく作ったスレッドが帰ってくる
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
 
 	// 初期スレッドの動作開始
 	dispatch(&current->context);
 }
 
+// OS内部の致命的なエラーが発生した時停止させるサービス関数
 void kz_sysdown(void)
 {
 	puts("system error!\n");
@@ -292,9 +303,17 @@ void kz_sysdown(void)
 		;
 }
 
+// 割込みベース
 void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 {
 	current->syscall.type = type;
 	current->syscall.param = param;
-	asm volatile("trapa #0");
+	// 8番の割り込み
+	// ブートローダの割込みベクタのintr_syscall (vector.c)
+	asm volatile("trapa #0"); // 割込みを発生？
+							  // -> 結果的に，SOFTVEC _TYPE _SYSCALLのソフトウェア割込みベクタが実行
+							  // -> thread_intr()
+							  // -> syscall_intr()
+							  // run:  -> thread_run()
+							  // exit: -> thread_end()
 }
