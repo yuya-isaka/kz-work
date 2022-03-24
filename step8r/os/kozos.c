@@ -225,6 +225,7 @@ static void syscall_intr(void)
 	switch (type)
 	{
 	case KZ_SYSCALL_TYPE_RUN: // kz_run
+		// threadの結果をretに格納
 		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
 		break;
 	case KZ_SYSCALL_TYPE_EXIT: // kz_exit
@@ -254,6 +255,7 @@ static void thread_intr(softvec_type_t type, unsigned long sp)
 
 	if (handlers[type]) // 割込みの種類ごとに処理
 		handlers[type]();
+	// thread_runが終わったらここに戻ってくる
 
 	schedule(); // レディーキューの先頭をカレントスレッドとしてcurrentに代入（ラウンドロビン）
 
