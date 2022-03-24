@@ -63,7 +63,7 @@ char *strcpy(char *dst, const char *src)
 	for (;;)
 	{
 		*dst = *src;
-		if (!*src)
+		if (!*src) // 今気づいたけど，\0を見つけたら抜けるってこと？？？
 			break;
 		dst++;
 		src++;
