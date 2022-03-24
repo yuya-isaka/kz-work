@@ -17,6 +17,7 @@ STRIP = $(BINDIR)/$(ADDNAME)strip
 # コンパイルするソース軍
 OBJS = startup.o main.o interrupt.o
 OBJS += lib.o serial.o
+OBJS += kozos.o syscall.o test08_1.o
 
 # 生成する実行形式のファイル名
 TARGET = kozos

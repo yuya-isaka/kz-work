@@ -121,7 +121,7 @@ static void thread_end(void)
 static void thread_init(kz_thread *thp)
 {
 	thp->init.func(thp->init.argc, thp->init.argv);
-	thread_end()
+	thread_end();
 }
 
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
@@ -155,8 +155,10 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 
 	uint32 *sp;
 	sp = (uint32 *)thp->stack;
-	*(--sp) = (uint32)thread_end;
-	*(--sp) = (uint32)thread_init; // ER7
+	// *(--sp) = (uint32)thread_end;
+
+	// dispatchで呼ばれるのと逆順にいれていく
+	*(--sp) = (uint32)thread_init; // rteで呼び出される
 	*(--sp) = 0;				   // ER6
 	*(--sp) = 0;				   // ER5
 	*(--sp) = 0;				   // ER4
@@ -164,16 +166,18 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	*(--sp) = 0;				   // ER2
 	*(--sp) = 0;				   // ER1
 	*(--sp) = (uint32)thp;		   // thread_initの引数
-	thp->context.sp = (uint32)sp;  // dispatchに渡される？
+
+	thp->context.sp = (uint32)sp; // dispatchに渡される？
 
 	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す
 
 	current = thp;
 	putcurrent();
 
-	return (kz_thread_it_t)current; // アドレスをスレッドIDとして戻す
+	return (kz_thread_id_t)current; // アドレスをスレッドIDとして戻す
 }
 
+// スレッドを終わらせる
 static int thread_exit(void)
 {
 	puts(current->name);
@@ -182,29 +186,17 @@ static int thread_exit(void)
 	return 0;
 }
 
-// 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
-
-static int setintr(softvec_type_t type, kz_handler_t handler)
-{
-	static void thread_intr(softvec_type_t type, unsigned long sp);
-
-	softvec_setintr(type, thread_intr);
-
-	handlers[type] = handler;
-
-	return 0;
-}
-
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
+// システムコールの種別に応じた処理が行われる．
 static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
 	switch (type)
 	{
-	case KZ_SYSCALL_TYPE_RUN:
-		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->rn.run.argv);
+	case KZ_SYSCALL_TYPE_RUN: // kz_run
+		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
 		break;
-	case KZ_SYSCALL_TYPE_EXIT:
+	case KZ_SYSCALL_TYPE_EXIT: // kz_exit
 		thread_exit();
 		break;
 	default:
@@ -214,43 +206,59 @@ static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 
 static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
-	getcurrent();
-	call_functions(type, p);
+	getcurrent();			// システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
+	call_function(type, p); // システムコールの処理関数呼び出し
 }
 
 // 割り込み処理 -------------------------------------------------------------------------------------------------------
 
 static void schedule(void)
 {
-	if (!readyque.head)
+	if (!readyque.head) // 次に実行するスレッドがなかったら終わり
 		kz_sysdown();
 
 	current = readyque.head;
 }
 
+// 登録するシステムコール関数
 static void syscall_intr(void)
 {
 	syscall_proc(current->syscall.type, current->syscall.param);
 }
 
+// 登録するソフトエラー関数
 static void softerr_intr(void)
 {
 	puts(current->name);
 	puts(" DOWN.\n");
-	getcurrent();
-	thread_exit();
+	getcurrent();  // このソフトエラー割込みを呼び出したスレッド（current）をレディーキューから外す
+	thread_exit(); // スレッド終了
 }
 
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
-	current->context.sp = sp;
+	current->context.sp = sp; // カレントスレッドのコンテキストを保存
 
-	if (handlers[type])
+	if (handlers[type]) // 割込みの種類ごとに処理
 		handlers[type]();
 
-	schedule();
+	schedule(); // レディーキューの先頭をカレントスレッドとしてcurrentに代入（ラウンドロビン）
 
-	dispatch(&current->context);
+	dispatch(&current->context); // カレントスレッドのディスパッチ (引数としてスレッドのコンテキスト情報の領域のアドレス)
+								 // カレンストレッドのスタックポインタ情報を渡しておかないと，割込み処理を実行したあと，どのスタックを用いればよいかわからなくなる
+}
+
+// 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
+
+static int setintr(softvec_type_t type, kz_handler_t handler)
+{
+	extern void thread_intr(softvec_type_t type, unsigned long sp);
+
+	softvec_setintr(type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
+
+	handlers[type] = handler; // ハンドラーに登録
+
+	return 0;
 }
 
 // 初期スレッドの起動 -------------------------------------------------------------------------------------------------------
@@ -263,8 +271,8 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	memset(threads, 0, sizeof(threads));
 	memset(handlers, 0, sizeof(handlers));
 
-	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr);
-	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr);
+	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // 1
+	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // 0
 
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
 
