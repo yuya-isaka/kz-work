@@ -11,6 +11,7 @@ kz_thread_id_t kz_run(kz_func_t func, char *name, int stacksize, int argc, char 
 	param.un.run.argc = argc;
 	param.un.run.argv = argv;
 	kz_syscall(KZ_SYSCALL_TYPE_RUN, &param);
+	// ディスパッチされてここに戻ってくる？
 	return param.un.run.ret;
 }
 

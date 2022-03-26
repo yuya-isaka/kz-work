@@ -118,10 +118,13 @@ static void thread_end(void)
 	kz_exit();
 }
 
+// スレッドを始めるときにディスパッチによって呼び出される処理だ．
+// thread_init自体がスレッドだと思えばいい（ディスパッチに呼び出されるのはこの関数）
+// kz_startからのディスパッチ -> startスレッドの処理開始(thread_initの処理開始) -> startスレッド内からkz_runからのシステムコールからのディスパッチ -> startスレッドに戻る(thread_initに戻る) -> thread_end()発動 -> kz_exit()発動 -> startスレッドからシステムコールからのディスパッチ (currentが更新されている) -> commandスレッドが始まる(thread_initが始まる）．
 static void thread_init(kz_thread *thp)
 {
-	thp->init.func(thp->init.argc, thp->init.argv);
-	thread_end();
+	thp->init.func(thp->init.argc, thp->init.argv); // スレッドのメイン関数（この中にシステムコールとかが含まれている）
+	thread_end(); // スレッドが終わった時 (スレッド終了のシステムコールが含まれている)
 }
 
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
@@ -135,6 +138,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 		if (!thp->init.func)
 			break;
 	}
+
 	if (i == THREAD_NUM)
 		return -1;
 
@@ -169,10 +173,10 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 
 	thp->context.sp = (uint32)sp; // dispatchに渡される？
 
-	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す
+	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す, kz_startから呼び出したやつはcurrent==NULLだから，特に影響はない
 
 	current = thp;
-	putcurrent();
+	putcurrent(); // 新しく追加するスレッドを尻尾につなげる
 
 	return (kz_thread_id_t)current; // アドレスをスレッドIDとして戻す
 }
@@ -206,7 +210,8 @@ static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 
 static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
-	getcurrent();			// システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
+	getcurrent(); // システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
+	// ちなみに外すだけで，currentは更新していない
 	call_function(type, p); // システムコールの処理関数呼び出し
 }
 
@@ -235,14 +240,20 @@ static void softerr_intr(void)
 	thread_exit(); // スレッド終了
 }
 
+// OSの処理
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
 	current->context.sp = sp; // カレントスレッドのコンテキストを保存
 
+	// 1. スレッドを生成して，レディーキューに繋げる．
+	// 2. スレッドを削除
 	if (handlers[type]) // 割込みの種類ごとに処理
 		handlers[type]();
+	// これが終わった時点では，新しく追加されたスレッドが，currentになっている
+	// レディーキューの先頭は, 元々のスレッド
 
 	schedule(); // レディーキューの先頭をカレントスレッドとしてcurrentに代入（ラウンドロビン）
+	// 次の実行するスレッドがレディーキューになかったらここで処理が終わる．
 
 	dispatch(&current->context); // カレントスレッドのディスパッチ (引数としてスレッドのコンテキスト情報の領域のアドレス)
 								 // カレンストレッドのスタックポインタ情報を渡しておかないと，割込み処理を実行したあと，どのスタックを用いればよいかわからなくなる
@@ -291,4 +302,13 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 	current->syscall.type = type;
 	current->syscall.param = param;
 	asm volatile("trapa #0");
+	// -> CPUがPCとCCRをスタックに移動させる -> スレッドの処理が停止
+	// -> vector.cで8番目のintr_syscallが呼ばれる -> 割込みの処理開始
+	// -> intr.Sに定義したintr_syscallがinterruptを実行
+	// -> interruptはSOFTVECSから指定された割り込みを実行 (ここではthread_intrが実行される) -> ここからがOSの処理
+	// -> thread_intrでhandler配列に登録された関数を実行（ここではsyscall_intrが実行される）
+	// -> syscall_intrで種類に応じて関数実行
+	// -> syscall_intrでは，システムコールを呼び出したスレッドをレディーキューから取り除いた後，thread_runかthread_exitを実行
+	// -> thread_runならスレッドが生成されて，レディーキューに繋がれる，thread_exitならcurrentを真っ白にする
+	// -> thread_intrに戻ってきて，scheduleしてスレッドをcurrentにセット，ディスパッチしてスレッドの処理を再開する． (ここで２回目のディスパッチ, startスレッドをdispatchしたから，戻る)
 }
