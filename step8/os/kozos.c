@@ -142,6 +142,8 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	uint32 *sp;
 	extern char userstack;					// リンカスクリプトで定義されるスタック領域
 	static char *thread_stack = &userstack; // -> 使用できるように定義
+	// -> staticを付けることで，関数を抜けても値が記憶される
+	// -> スタック領域は重複されることなく確保される!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1111
 
 	// 1. 空いているTCBを検索
 	for (i = 0; i < THREAD_NUM; i++)
@@ -179,7 +181,10 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	// 3. スレッド用のスタック領域の確保
 	memset(thread_stack, 0, stacksize); // リンカスクリプトで定義された場所を０で事前初期化
 	thread_stack += stacksize;			// スタックを加算で確保 (0xfff400 ~ 0xfff464)
-	thp->stack = thread_stack;			// スレッドを再開するためのスタックポインタ（コンテキスト情報）(0xfff464を指す)
+	// -> staticで定義されているから，重複することなく確保できる
+	thp->stack = thread_stack; // スレッドを再開するためのスタックポインタ（コンテキスト情報）(0xfff464を指す)
+	// -> スレッドは下方伸長（アドレスが小さい方向に伸びる）ので，確保直後の一番大きいアドレスを初期値として持つ
+	// thp->stackはスタックの一番大きい値
 
 	// 4. スタックの初期化（適切な値を設定）
 	sp = (uint32 *)thp->stack;	  // 設定するときは間接的なspポインタを利用 -> スレッドのコンテキストとしてTCBに設定
@@ -204,7 +209,9 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	thp->context.sp = (uint32)sp;
 	// -> 『dispatch関数』の引数
 	//    『スレッドのコンテキスト』は汎用レジスタの復旧に利用される
-	//	   スタックポインタが分かれば復旧できる
+	//	   KOZOSではスタックポインタが分かれば復旧できる！！！！！！！！！！！！！！
+	// -> 復旧したのち，『thread_init関数』が呼び出される．
+	//    その際，汎用レジスタは復旧されている且つ，スタックポインタも最大値を指しており，下方伸長して利用するのに問題なくなっている．
 
 	// システムコールを呼び出したスレッドをレディーキューに戻す
 	putcurrent();
