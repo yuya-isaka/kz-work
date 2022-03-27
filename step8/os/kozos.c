@@ -376,18 +376,30 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 	asm volatile("trapa #0");
 	/*
 	『intr_syscall関数』 (『vector.c』で8番目のintr_syscall, 『intrS』に定義)
-	 - 汎用レジスタをスレッドのスタック領域に退避
-	 - スタック領域を割込みスタックに切り替え
-
+		- 汎用レジスタを『スレッドスタック領域（0xfff400)』に退避
+		- スタック領域を『割込みスタック領域(0xffff00)』に切り替え
+	『interrupt関数』　(『interrupt.c』で定義)
+		- ソフトウェア割込みハンドラが登録されていたら，　割込みハンドラを呼ぶ
+	『thread_inrt関数』
+		- 割込み要因に応じて割込みハンドラの呼び分け（システムコールなら『syscall_intr関数』，　ダウン要因発生なら『soft_intr関数』が呼ばれる）
+			『syscall_intr関数』
+				- 以下の処理がシステムコール特有の割込みハンドラないでの処理と明示する（ラッパー関数）
+			『syscall_proc関数』
+				- レディーキューからカレントスレッドを抜く（システムコール種別に依存しない処理）
+				- システムコール種別に応じた処理を行う（『call_functions関数』)
+			『call_functions関数』
+				- システムコール種別に応じた処理
+					- 『thread_run関数』．．．新規スレッドができてレディーキューの末尾に繋がれる
+					- 『thread_exit関数』．．．currentを真っ白にする
+	 	- スレッドのスケジューリング
+			『schedule関数』
+				- スレッドのスケジューリング（ラウンドロビン方式なので，レディーキューの先頭が次に実行されるスレッドになる）
+	 	- スレッドのディスパッチ
+			『dispatch関数』
+				- カレントスレッドのスタック領域から以下を復旧する．
+					- 汎用レジスタ
+					- プログラムカウンタ
+					-	 CCR
+				- スレッドの処理を再開する．
 	*/
-
-	// -> CPUがPCとCCRをスタックに移動させる -> スレッドの処理が停止
-	// -> vector.cで8番目のintr_syscallが呼ばれる -> 割込みの処理開始
-	// -> intr.Sに定義したintr_syscallがinterruptを実行
-	// -> interruptはSOFTVECSから指定された割り込みを実行 (ここではthread_intrが実行される) -> ここからがOSの処理
-	// -> thread_intrでhandler配列に登録された関数を実行（ここではsyscall_intrが実行される）
-	// -> syscall_intrで種類に応じて関数実行
-	// -> syscall_intrでは，システムコールを呼び出したスレッドをレディーキューから取り除いた後，thread_runかthread_exitを実行
-	// -> thread_runならスレッドが生成されて，レディーキューに繋がれる，thread_exitならcurrentを真っ白にする
-	// -> thread_intrに戻ってきて，scheduleしてスレッドをcurrentにセット，ディスパッチしてスレッドの処理を再開する． (ここで２回目のディスパッチ, startスレッドをdispatchしたから，戻る)
 }
