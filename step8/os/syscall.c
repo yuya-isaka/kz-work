@@ -2,6 +2,9 @@
 #include "kozos.h"
 #include "syscall.h"
 
+// どこから呼び出されてる？
+// 『main.c』の『start_threads関数』
+// スレッドの生成
 kz_thread_id_t kz_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
 	kz_syscall_param_t param;
@@ -14,6 +17,8 @@ kz_thread_id_t kz_run(kz_func_t func, char *name, int stacksize, int argc, char 
 	return param.un.run.ret;
 }
 
+// どこから？
+// 『kozos.c』の『thread_end関数』
 void kz_exit(void)
 {
 	kz_syscall(KZ_SYSCALL_TYPE_EXIT, NULL);

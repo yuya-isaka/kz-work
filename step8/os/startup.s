@@ -17,6 +17,8 @@ _start: # ラベル_startの定義
 	.global _dispatch
 	.type 	_dispatch, @function
 
+# どこから？
+# 『kozos.c』の『kz_start関数』と『thread_intr関数』
 # スレッドのディスパッチ処理（ディスパッチャ）
 _dispatch:
 	# スタックポインタを第一引数(er0）として渡された『スレッドのスタックポインタ』で上書き

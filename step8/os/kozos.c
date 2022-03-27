@@ -113,11 +113,15 @@ static int putcurrent(void)
 
 // スレッドの起動と終了 -------------------------------------------------------------------------------------------------
 
+// どこから？
+// 『kozos.c』の『thread_init関数』で呼び出し
 static void thread_end(void)
 {
 	kz_exit();
 }
 
+// どこから？
+// 『startup.s』の『_dispatch関数』
 // スレッドを始めるときにディスパッチによって呼び出される処理だ．
 // thread_init自体がスレッドだと思えばいい（ディスパッチに呼び出されるのはこの関数）
 // kz_startからのディスパッチ -> startスレッドの処理開始(thread_initの処理開始) -> startスレッド内からkz_runからのシステムコールからのディスパッチ -> startスレッドに戻る(thread_initに戻る) -> thread_end()発動 -> kz_exit()発動 -> startスレッドからシステムコールからのディスパッチ (currentが更新されている) -> commandスレッドが始まる(thread_initが始まる）．
@@ -367,6 +371,8 @@ void kz_sysdown(void)
 		;
 }
 
+// どこから呼び出されてる？
+// 『syscall.c』の『kz_run関数』と『kz_exit関数』
 void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 {
 	current->syscall.type = type;
