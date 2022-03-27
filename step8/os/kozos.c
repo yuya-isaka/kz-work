@@ -128,6 +128,13 @@ static void thread_init(kz_thread *thp)
 }
 
 // 新規スレッドの作成（OSの機能，『kz_runシステムコール』で使われる）
+/*
+	- 1. 空いているTCBの検索
+	- 2. TCBの設定
+	- 3. メモリ上にスタック領域の確保
+	- 4. スタック領域の初期化
+	- 5. 新規スレッドをレディーキューに接続
+*/
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
 	int i;
@@ -136,12 +143,12 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	extern char userstack;					// リンカスクリプトで定義されるスタック領域
 	static char *thread_stack = &userstack; // -> 使用できるように定義
 
-	// 空いているTCBを検索
+	// 1. 空いているTCBを検索
 	for (i = 0; i < THREAD_NUM; i++)
 	{
 		thp = &threads[i];
 		// 見つかった！
-		if (!thp->init.func)
+		if (!thp->init.func) // 空いているTCBはinit.funcが登録されていない
 			break;
 	}
 
@@ -151,21 +158,30 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 
 	// 初期化
 	memset(thp, 0, sizeof(*thp));
+	// ゴミが残ってるかもなので0埋め
 	// thpを新規スレッドとして育成
 
-	// TCBの設定
-	strcpy(thp->name, name); // 名前
-	thp->next = NULL;		 // 次のスレッド
-	thp->init.func = func;	 // スレッドの処理関数
+	// 2. TCBの設定
+	/*
+		- スレッド名前
+		- 次のスレッド
+		- スレッド起動直後に呼ばれる関数
+		- 引数
+		- 引数
+		- スレッドを再開するためのスタックポインタ
+	*/
+	strcpy(thp->name, name); // スレッド名前
+	thp->next = NULL;		 // 次のスレッド (新規スレッドはレディーキューの末尾に登録されるから，nextは『NULL』)
+	thp->init.func = func;	 // スレッド起動後に呼ばれる関数
 	thp->init.argc = argc;	 // 引数
 	thp->init.argv = argv;	 // 引数
 
-	// スレッド用のスタック領域の確保
+	// 3. スレッド用のスタック領域の確保
 	memset(thread_stack, 0, stacksize); // リンカスクリプトで定義された場所を０で事前初期化
 	thread_stack += stacksize;			// スタックを加算で確保 (0xfff400 ~ 0xfff464)
-	thp->stack = thread_stack;			// TCBのスタックに設定 (0xfff464を指す)
+	thp->stack = thread_stack;			// スレッドを再開するためのスタックポインタ（コンテキスト情報）(0xfff464を指す)
 
-	// スタックの初期化（適切な値を設定）
+	// 4. スタックの初期化（適切な値を設定）
 	sp = (uint32 *)thp->stack;	  // 設定するときは間接的なspポインタを利用 -> スレッドのコンテキストとしてTCBに設定
 	*(--sp) = (uint32)thread_end; // スレッド終了用 ()
 
@@ -179,6 +195,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	*(--sp) = 0; // ER2
 	*(--sp) = 0; // ER1
 				 // -> 『dispatch関数』の呼び出しと逆順に格納
+				 //     （ER0から順番に加算しながら復帰するから）
 
 	//『thread_init関数』の引数
 	*(--sp) = (uint32)thp; // ER0
@@ -189,12 +206,16 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	//    『スレッドのコンテキスト』は汎用レジスタの復旧に利用される
 	//	   スタックポインタが分かれば復旧できる
 
-	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す, kz_startから呼び出したやつはcurrent==NULLだから，特に影響はない
+	// システムコールを呼び出したスレッドをレディーキューに戻す
+	putcurrent();
+	// kz_startから呼ばれた場合は，NULLだから影響はない
 
+	// 5. 新規スレッドをレディーキューに接続（末尾）
 	current = thp;
-	putcurrent(); // 新しく追加するスレッドを尻尾につなげる
+	putcurrent();
 
-	return (kz_thread_id_t)current; // アドレスをスレッドIDとして戻す
+	// 新規スレッドのアドレスを返却
+	return (kz_thread_id_t)current;
 }
 
 // スレッドを終わらせる
