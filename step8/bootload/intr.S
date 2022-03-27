@@ -70,6 +70,7 @@ _intr_softerr:
 
 
 # システムコール割込みハンドラ--------------------------------------------
+# interruptで実行されるのが，OSの処理
 
 	.global	_intr_syscall
 	.type	_intr_syscall, @function

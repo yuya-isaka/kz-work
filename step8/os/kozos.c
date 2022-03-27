@@ -124,7 +124,7 @@ static void thread_end(void)
 static void thread_init(kz_thread *thp)
 {
 	thp->init.func(thp->init.argc, thp->init.argv); // スレッドのメイン関数（この中にシステムコールとかが含まれている）
-	thread_end(); // スレッドが終わった時 (スレッド終了のシステムコールが含まれている)
+	thread_end();									// スレッドが終わった時 (スレッド終了のシステムコールが含まれている)
 }
 
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
@@ -241,6 +241,7 @@ static void softerr_intr(void)
 }
 
 // OSの処理
+// OSの本体
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
 	current->context.sp = sp; // カレントスレッドのコンテキストを保存
@@ -286,6 +287,8 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // 0
 
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
+
+	INTR_ENABLE; // 本にはなかったけど，ここらへんでするべき
 
 	dispatch(&current->context);
 }

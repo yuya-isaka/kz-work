@@ -33,6 +33,7 @@ int softvec_setintr(softvec_type_t type, softvec_handler_t handler)
 // 共通割込みハンドラ
 // intr.Sから呼ばれていた関数はこれ
 // ソフトウェア割込みベクタのアドレスを見て，各ハンドラに分岐する
+// これがOS !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 void interrupt(softvec_type_t type, unsigned long sp)
 {
 	softvec_handler_t handler = SOFTVECS[type];
