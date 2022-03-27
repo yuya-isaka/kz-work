@@ -135,6 +135,8 @@ static void thread_init(kz_thread *thp)
 	thread_end();									// スレッドが終わった時 (スレッド終了のシステムコールが含まれている)
 }
 
+// どこから？
+// 『kozos.c』の『call_function
 // 新規スレッドの作成（OSの機能，『kz_runシステムコール』で使われる）
 /*
 	- 1. 空いているTCBの検索
@@ -235,7 +237,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 }
 
 // どこから？
-// 『kozos.c』の『call_function関数（thread_endシステムコール)』，『softerr_intr関数』
+// 『kozos.c』の『call_function関数（1(exit)システムコール)』，『softerr_intr関数』
 // スレッドを終わらせる
 // システムコール
 static int thread_exit(void)
@@ -251,9 +253,9 @@ static int thread_exit(void)
 // どこから？
 // 『kozos.c』の『syscall_proc関数』
 // システムコールの種別に応じた処理が行われる．
-static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
+static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 {
-	switch (type)
+	switch (sys_type)
 	{
 	case KZ_SYSCALL_TYPE_RUN: // kz_run
 		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
@@ -268,14 +270,20 @@ static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 
 // どこから？
 // 『kozos.c』の『syscall_intr関数』
-static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
+static void syscall_proc(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 {
 	getcurrent(); // システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
 	// ちなみに外すだけで，currentは更新していない
-	call_function(type, p); // システムコールの処理関数呼び出し
+	call_function(sys_type, p); // システムコールの処理関数呼び出し
 }
 
-// 割り込み処理 -------------------------------------------------------------------------------------------------------
+// どこから？
+// 『kozos.c』の『thread_intr関数』（handlers[sof_type]()）
+// 割り込みハンドラ
+static void syscall_intr(void)
+{
+	syscall_proc(current->syscall.type, current->syscall.param);
+}
 
 // どこから？
 // 『kozos.c』の『thread_intr関数
@@ -288,15 +296,7 @@ static void schedule(void)
 }
 
 // どこから？
-// 『kozos.c』の『thread_intr関数』（handlers[type]()）
-// 割り込みハンドラ
-static void syscall_intr(void)
-{
-	syscall_proc(current->syscall.type, current->syscall.param);
-}
-
-// どこから？
-// 『kozos.c』の『thread_intr関数』（handlers[type]()）
+// 『kozos.c』の『thread_intr関数』（handlers[sof_type]()）
 // 割り込みハンドラ
 static void softerr_intr(void)
 {
@@ -309,14 +309,14 @@ static void softerr_intr(void)
 // どこから？
 // 『interrupt.c』の『interrupt関数』から（thread_intrがSOFTVECS配列に登録されている）
 // 割込みハンドラ＝＝OSの処理
-static void thread_intr(softvec_type_t type, unsigned long sp)
+static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 {
 	// カレントスレッドのコンテキストを保存
 	current->context.sp = sp;
 
 	// syscall_intr() or softerr_intr()
-	if (handlers[type])
-		handlers[type]();
+	if (handlers[sof_type])
+		handlers[sof_type]();
 
 	// レディーキューの先頭をカレントスレッドとしてcurrentに代入（ラウンドロビン）
 	// 次の実行するスレッドがレディーキューになかったらここで処理が終わる．
@@ -329,13 +329,13 @@ static void thread_intr(softvec_type_t type, unsigned long sp)
 
 // 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
 
-static int setintr(softvec_type_t type, kz_handler_t handler)
+static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 {
-	extern void thread_intr(softvec_type_t type, unsigned long sp);
+	extern void thread_intr(softvec_type_t sof_type, unsigned long sp);
 
-	softvec_setintr(type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
+	softvec_setintr(sof_type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
 
-	handlers[type] = handler; // ハンドラーに登録
+	handlers[sof_type] = handler; // ハンドラーに登録
 
 	return 0;
 }
@@ -395,9 +395,9 @@ void kz_sysdown(void)
 
 // どこから？
 // 『syscall.c』の『kz_run関数』と『kz_exit関数』
-void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
+void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param)
 {
-	current->syscall.type = type;
+	current->syscall.type = sys_type; // 0(run) or 1(exit)
 	current->syscall.param = param;
 	// TRAP0命令発効
 	asm volatile("trapa #0");

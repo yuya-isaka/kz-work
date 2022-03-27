@@ -42,7 +42,7 @@ void kz_sysdown(void);
 /*
 	システムコールの呼び出しを行う共通関数
 */
-void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param);
+void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 
 // ユーザスレッド
 /*

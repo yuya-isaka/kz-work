@@ -23,7 +23,7 @@ typedef short softvec_type_t;
 // 定義したハンドラ関数を受け取る時に使ったりする
 // 関数へのポインタ定義の記述
 // -> 「関数のプロトタイプ宣言をして，関数名の部分を(*f)に置き換える．」終わり
-typedef void (*softvec_handler_t)(softvec_type_t type, unsigned long sp);
+typedef void (*softvec_handler_t)(softvec_type_t sof_type, unsigned long sp);
 
 // defineでわかりやすく定義 -------------------------------------------------
 // ソフトウェア・割込みベクタの位置
@@ -44,9 +44,9 @@ typedef void (*softvec_handler_t)(softvec_type_t type, unsigned long sp);
 // ソフトウェア・割込みベクタの初期化
 int softvec_init(void);
 // ソフトウェア割込みベクタの設定
-int softvec_setintr(softvec_type_t type, softvec_handler_t handler);
+int softvec_setintr(softvec_type_t sof_type, softvec_handler_t handler);
 // 共通割込みハンドラ
 // ソフトウェア割込みベクタを処理するための共通割込みハンドラ
-void interrupt(softvec_type_t type, unsigned long sp);
+void interrupt(softvec_type_t sof_type, unsigned long sp);
 
 #endif

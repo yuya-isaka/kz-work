@@ -8,25 +8,25 @@
 // ソフトウェア割込みベクタの初期化
 int softvec_init(void)
 {
-	int type;
-	for (type = 0; type < SOFTVEC_TYPE_NUM; type++) // すべてのソフトウェア割込みベクタアドレスをNULLに設定
+	int sof_type;
+	for (sof_type = 0; sof_type < SOFTVEC_TYPE_NUM; sof_type++) // すべてのソフトウェア割込みベクタアドレスをNULLに設定
 	{
 		// 0 ソフトウェアエラー
 		// 1 システムコール
 		// 2 シリアル割込み
-		softvec_setintr(type, NULL);
+		softvec_setintr(sof_type, NULL);
 	}
 	return 0;
 }
 
 // ソフトウェア割込みベクタの設定（ハンドラ関数を登録）
 // typeは場所
-int softvec_setintr(softvec_type_t type, softvec_handler_t handler)
+int softvec_setintr(softvec_type_t sof_type, softvec_handler_t handler)
 {
 	// 0 ソフトウェアエラー
 	// 1 システムコール
 	// 2 シリアル割込み
-	SOFTVECS[type] = handler;
+	SOFTVECS[sof_type] = handler;
 	return 0;
 }
 
