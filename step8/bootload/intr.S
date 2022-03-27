@@ -75,8 +75,10 @@ _intr_softerr:
 	.global	_intr_syscall
 	.type	_intr_syscall, @function
 
+# 注意
+# スタック領域は『割込みスタック領域(0xffff00)』と『スレッドスタック領域(0xfff400)』がある
 _intr_syscall:
-	# レジスタの退避
+	# システムコールを呼び出したスレッドの『汎用レジスタ』を，　スレッドのスタック領域に退避
 	mov.l	er6, @-er7 # 格納したら4バイト減算
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
@@ -85,10 +87,29 @@ _intr_syscall:
 	mov.l	er1, @-er7
 	mov.l	er0, @-er7
 
+	# スレッドのスタック領域を第２引数ER1に代入
 	mov.l	er7, er1
+
+	# スタックポインタを『割込みスタック領域』に切り替える
+	# -> 『0xffff00』に変更
+	mov.l 	#_intrstack, sp
+
+	# 割込みスタック領域に『システムコールを発行したスレッド』のスタックポインタを保持する
+	mov.l	er1, @-er7
+
+	# r0にsyscallだよって情報を格納
 	mov.w	#SOFTVEC_TYPE_SYSCALL, r0
+
+	# 関数呼び出し
 	jsr		@_interrupt
 
+	# スレッドのディスパッチが実行されると，これ以降は実行されない．
+
+	# スタックポインタを『スレッドスタック領域』に切り替える
+	mov.l	@er7+, er1
+	mov.l	er1, er7
+
+	# 汎用レジスタの復帰
 	mov.l	@er7+, er0
 	mov.l	@er7+, er1
 	mov.l	@er7+, er2
@@ -96,6 +117,8 @@ _intr_syscall:
 	mov.l	@er7+, er4
 	mov.l	@er7+, er5
 	mov.l	@er7+, er6
+
+	# スレッドの処理再開
 	rte
 
 
@@ -105,7 +128,8 @@ _intr_syscall:
 	.type	_intr_serintr, @function 	# なくてもいい，　デバッグよう
 
 _intr_serintr:
-	mov.l	er6, @-er7
+	# シリアル割込みを呼び出したスレッドの『汎用レジスタ』を，　スレッドのスタック領域に退避
+	mov.l	er6, @-er7 # 格納したら4バイト減算
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
 	mov.l	er3, @-er7
@@ -113,15 +137,36 @@ _intr_serintr:
 	mov.l	er1, @-er7
 	mov.l	er0, @-er7
 
+	# スレッドのスタック領域を第２引数ER1に代入
 	mov.l	er7, er1
-	mov.w	#SOFTVEC_TYPE_SERINTR, r0 # interrupt.cの関数interrupt()
+
+	# スタックポインタを割込みスタック領域に切り替える
+	# -> 『0xffff00』に変更
+	mov.l 	#_intrstack, sp
+
+	# 割込みスタック領域に『シリアル割込みを発行したスレッド』のスタックポインタを保持する
+	mov.l	er1, @-er7
+
+	# r0にシリアル割込みだよって情報を格納
+	mov.w	#SOFTVEC_TYPE_SERINTR, r0
+
+	# 関数呼び出し
 	jsr		@_interrupt
 
+	# スレッドのディスパッチが実行されると，これ以降は実行されない．
+
+	# スタックポインタをスレッドのスタック領域に切り替える
+	mov.l	@er7+, er1
+	mov.l	er1, er7
+
+	# 汎用レジスタの復帰
 	mov.l	@er7+, er0
 	mov.l	@er7+, er1
-	mov.l 	@er7+, er2
-	mov.l 	@er7+, er3
-	mov.l 	@er7+, er4
-	mov.l 	@er7+, er5
-	mov.l 	@er7+, er6
+	mov.l	@er7+, er2
+	mov.l	@er7+, er3
+	mov.l	@er7+, er4
+	mov.l	@er7+, er5
+	mov.l	@er7+, er6
+
+	# スレッドの処理再開
 	rte

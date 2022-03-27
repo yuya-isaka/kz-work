@@ -372,7 +372,15 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 {
 	current->syscall.type = type;
 	current->syscall.param = param;
+	// TRAP0命令発効
 	asm volatile("trapa #0");
+	/*
+	『intr_syscall関数』 (『vector.c』で8番目のintr_syscall, 『intrS』に定義)
+	 - 汎用レジスタをスレッドのスタック領域に退避
+	 - スタック領域を割込みスタックに切り替え
+
+	*/
+
 	// -> CPUがPCとCCRをスタックに移動させる -> スレッドの処理が停止
 	// -> vector.cで8番目のintr_syscallが呼ばれる -> 割込みの処理開始
 	// -> intr.Sに定義したintr_syscallがinterruptを実行
