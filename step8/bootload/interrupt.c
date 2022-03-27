@@ -40,4 +40,5 @@ void interrupt(softvec_type_t type, unsigned long sp)
 	// ソフトウェア割込みベクタが設定されているならば，ハンドラを呼び出す
 	if (handler)
 		handler(type, sp);
+	// -> 必ずthread_intr関数
 }
