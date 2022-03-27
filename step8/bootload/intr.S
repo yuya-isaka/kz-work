@@ -76,7 +76,8 @@ _intr_softerr:
 	.type	_intr_syscall, @function
 
 _intr_syscall:
-	mov.l	er6, @-er7
+	# レジスタの退避
+	mov.l	er6, @-er7 # 格納したら4バイト減算
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
 	mov.l	er3, @-er7

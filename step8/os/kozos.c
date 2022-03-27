@@ -193,6 +193,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	*(--sp) = (uint32)thread_init; // rteで呼び出される -> CPUによってここをPCとして設定される -> エントリー関数を設定
 	// -> スレッドのスタートアップが『thread_init関数』
 
+	// 汎用レジスタ復旧用の設定
 	*(--sp) = 0; // ER6
 	*(--sp) = 0; // ER5
 	*(--sp) = 0; // ER4
@@ -346,15 +347,18 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	// -> 登録した割込みハンドラは直接呼ばれない．割込み要因がシステムコールであろうがダウン要因発生だろうが，必ず『thread_intr関数』が呼ばれる．
 	//    thread_intr関数の中で，『syscall_intr関数』『softerr_intr関数』が呼び分けられる
 
-	// 初期スレッドの作成
+	// 初期スレッドの新規作成
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
 	// （システムコールを使って初期スレッドを作成したいが，システムコールはスレッドからしか呼べない仕様になっている...）
 	// -> OSの機能(『thread_run関数』)を直接使用して初期スレッドを生成
 	// thread_run関数の説明はその関数にLet's Go
 
+	// 割込み有効化
 	INTR_ENABLE; // 本にはなかったけど，ここらへんでするべき
 
+	// スレッド処理再開（上の『thread_run』で新規作成したスレッドを処理開始）
 	dispatch(&current->context);
+	// 『startup.s』に書かれている
 }
 
 void kz_sysdown(void)
