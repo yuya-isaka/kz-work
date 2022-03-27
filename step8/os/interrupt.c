@@ -30,6 +30,8 @@ int softvec_setintr(softvec_type_t type, softvec_handler_t handler)
 	return 0;
 }
 
+// どこから？
+// 『bootload/intr.S』の『_intr_softerr関数』，『_intr_syscall関数』，『_intr_serintr関数』
 // 共通割込みハンドラ
 // intr.Sから呼ばれていた関数はこれ
 // ソフトウェア割込みベクタのアドレスを見て，各ハンドラに分岐する

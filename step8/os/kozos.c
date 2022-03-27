@@ -66,6 +66,8 @@ void dispatch(kz_context *context);
 
 // レディーキューの操作 (リンクリストの操作，ポインタの操作) -----------------------------------------------------------------------------------------
 
+// どこから？
+// 『kozos.c』の『syscall_proc関数』，『softerr_intr関数』
 // カレントスレッドをレディーキューから抜き出す（デキュー）
 static int getcurrent(void)
 {
@@ -86,6 +88,8 @@ static int getcurrent(void)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『thread_run関数』
 // カレントスレッドをレディーキューに繋げる（エンキュー）
 // レディーキューの末尾にカレントスレッドをつなげる
 static int putcurrent(void)
@@ -121,7 +125,7 @@ static void thread_end(void)
 }
 
 // どこから？
-// 『startup.s』の『_dispatch関数』
+// 『os/startup.s』の『_dispatch関数』
 // スレッドを始めるときにディスパッチによって呼び出される処理だ．
 // thread_init自体がスレッドだと思えばいい（ディスパッチに呼び出されるのはこの関数）
 // kz_startからのディスパッチ -> startスレッドの処理開始(thread_initの処理開始) -> startスレッド内からkz_runからのシステムコールからのディスパッチ -> startスレッドに戻る(thread_initに戻る) -> thread_end()発動 -> kz_exit()発動 -> startスレッドからシステムコールからのディスパッチ (currentが更新されている) -> commandスレッドが始まる(thread_initが始まる）．
@@ -230,7 +234,10 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	return (kz_thread_id_t)current;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（thread_endシステムコール)』，『softerr_intr関数』
 // スレッドを終わらせる
+// システムコール
 static int thread_exit(void)
 {
 	puts(current->name);
@@ -241,6 +248,8 @@ static int thread_exit(void)
 
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
+// どこから？
+// 『kozos.c』の『syscall_proc関数』
 // システムコールの種別に応じた処理が行われる．
 static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
@@ -257,6 +266,8 @@ static void call_function(kz_syscall_type_t type, kz_syscall_param_t *p)
 	}
 }
 
+// どこから？
+// 『kozos.c』の『syscall_intr関数』
 static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
 {
 	getcurrent(); // システムコールを呼び出したスレッドをレディーキューから外した状態で処理関数を呼び出す -> システムコールを呼び出したスレッドをそのまま動作継続させたい場合は，処理関数の内部でputcurrent()がいる
@@ -266,6 +277,8 @@ static void syscall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
 
 // 割り込み処理 -------------------------------------------------------------------------------------------------------
 
+// どこから？
+// 『kozos.c』の『thread_intr関数
 static void schedule(void)
 {
 	if (!readyque.head) // 次に実行するスレッドがなかったら終わり
@@ -274,13 +287,17 @@ static void schedule(void)
 	current = readyque.head;
 }
 
-// 登録するシステムコール関数
+// どこから？
+// 『kozos.c』の『thread_intr関数』（handlers[type]()）
+// 割り込みハンドラ
 static void syscall_intr(void)
 {
 	syscall_proc(current->syscall.type, current->syscall.param);
 }
 
-// 登録するソフトエラー関数
+// どこから？
+// 『kozos.c』の『thread_intr関数』（handlers[type]()）
+// 割り込みハンドラ
 static void softerr_intr(void)
 {
 	puts(current->name);
@@ -289,6 +306,8 @@ static void softerr_intr(void)
 	thread_exit(); // スレッド終了
 }
 
+// どこから？
+// 『interrupt.c』の『interrupt関数』から（thread_intrがSOFTVECS配列に登録されている）
 // 割込みハンドラ＝＝OSの処理
 static void thread_intr(softvec_type_t type, unsigned long sp)
 {
@@ -323,6 +342,8 @@ static int setintr(softvec_type_t type, kz_handler_t handler)
 
 // 初期スレッドの起動 -------------------------------------------------------------------------------------------------------
 
+// どこから？
+// 『main.c』の『main関数』
 void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
 	// カレントスレッドの初期化
@@ -343,6 +364,7 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	// 割込みハンドラの初期化
 	memset(handlers, 0, sizeof(handlers));
 	// 割込みハンドラは誤動作防止のためすべて０で初期化
+	// syscall_intrとsofterr_intrを登録する
 
 	// 割込みハンドラの登録
 	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録
@@ -371,7 +393,7 @@ void kz_sysdown(void)
 		;
 }
 
-// どこから呼び出されてる？
+// どこから？
 // 『syscall.c』の『kz_run関数』と『kz_exit関数』
 void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 {
@@ -389,7 +411,7 @@ void kz_syscall(kz_syscall_type_t type, kz_syscall_param_t *param)
 	『interrupt関数』　(『interrupt.c』で定義)
 		- ソフトウェア割込みハンドラが登録されていたら，　割込みハンドラを呼ぶ
 	↓
-	『thread_inrt関数』 (割込みハンドラ==OS)
+	『thread_intr関数』 (割込みハンドラ==OS)
 		- システムコールを発行したスレッドのスタックポインタを保持
 		↓
 		- 割込み要因に応じて割込みハンドラの呼び分け （システムコールなら『syscall_intr関数』，　ダウン要因発生なら『soft_intr関数』が呼ばれる）

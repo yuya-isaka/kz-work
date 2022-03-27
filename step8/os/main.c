@@ -6,7 +6,7 @@
 extern int test08_1_main(int argc, char *argv[]);
 
 // どこで呼び出されてる？
-// 『kozos.c』の『thread_init関数』のinit.func
+// 『kozos.c』の『thread_init関数』（init.func）
 static int start_threads(int argc, char *argv[])
 {
 	kz_run(test08_1_main, "command", 0x100, 0, NULL);

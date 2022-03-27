@@ -75,6 +75,8 @@ _intr_softerr:
 	.global	_intr_syscall
 	.type	_intr_syscall, @function
 
+# どこから？
+# 『kozos.c』の『kz_syscall関数』
 # 注意
 # スタック領域は『割込みスタック領域(0xffff00)』と『スレッドスタック領域(0xfff400)』がある
 _intr_syscall:
