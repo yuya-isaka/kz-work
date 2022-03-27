@@ -19,11 +19,11 @@ _start: # ラベル_startの定義
 _dispatch:
 	mov.l	@er0, er7	# 引数としてスレッドのスタックポインタが渡される
 	# スレッドのスタックから汎用レジスタの値を復旧する
-	mov.l	@er7+, er0
+	mov.l	@er7+, er0 // ロードしたら4バイト加算
 	mov.l	@er7+, er1
 	mov.l	@er7+, er2
 	mov.l	@er7+, er3
 	mov.l	@er7+, er4
 	mov.l	@er7+, er5
 	mov.l	@er7+, er6
-	rte
+	rte // 割込み復帰命令で，コンテキスト切り替え（PCとCCRの変更, CPUが実行する）

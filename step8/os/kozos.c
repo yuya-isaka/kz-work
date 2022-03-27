@@ -127,51 +127,67 @@ static void thread_init(kz_thread *thp)
 	thread_end();									// スレッドが終わった時 (スレッド終了のシステムコールが含まれている)
 }
 
+// 新規スレッドの作成（OSの機能，『kz_runシステムコール』で使われる）
 static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
-	// 空きのTCBを検索
 	int i;
 	kz_thread *thp;
+	uint32 *sp;
+	extern char userstack;					// リンカスクリプトで定義されるスタック領域
+	static char *thread_stack = &userstack; // -> 使用できるように定義
+
+	// 空いているTCBを検索
 	for (i = 0; i < THREAD_NUM; i++)
 	{
 		thp = &threads[i];
+		// 見つかった！
 		if (!thp->init.func)
 			break;
 	}
 
+	// 見つからなかった;;
 	if (i == THREAD_NUM)
 		return -1;
 
+	// 初期化
 	memset(thp, 0, sizeof(*thp));
+	// thpを新規スレッドとして育成
 
-	// TCB設定
-	strcpy(thp->name, name);
-	thp->next = NULL;
-	thp->init.func = func;
-	thp->init.argc = argc;
-	thp->init.argv = argv;
+	// TCBの設定
+	strcpy(thp->name, name); // 名前
+	thp->next = NULL;		 // 次のスレッド
+	thp->init.func = func;	 // スレッドの処理関数
+	thp->init.argc = argc;	 // 引数
+	thp->init.argv = argv;	 // 引数
 
-	extern char userstack;
-	static char *thread_stack = &userstack;
-	memset(thread_stack, 0, stacksize);
-	thread_stack += stacksize;
-	thp->stack = thread_stack;
+	// スレッド用のスタック領域の確保
+	memset(thread_stack, 0, stacksize); // リンカスクリプトで定義された場所を０で事前初期化
+	thread_stack += stacksize;			// スタックを加算で確保 (0xfff400 ~ 0xfff464)
+	thp->stack = thread_stack;			// TCBのスタックに設定 (0xfff464を指す)
 
-	uint32 *sp;
-	sp = (uint32 *)thp->stack;
-	// *(--sp) = (uint32)thread_end;
+	// スタックの初期化（適切な値を設定）
+	sp = (uint32 *)thp->stack;	  // 設定するときは間接的なspポインタを利用 -> スレッドのコンテキストとしてTCBに設定
+	*(--sp) = (uint32)thread_end; // スレッド終了用 ()
 
-	// dispatchで呼ばれるのと逆順にいれていく
-	*(--sp) = (uint32)thread_init; // rteで呼び出される
-	*(--sp) = 0;				   // ER6
-	*(--sp) = 0;				   // ER5
-	*(--sp) = 0;				   // ER4
-	*(--sp) = 0;				   // ER3
-	*(--sp) = 0;				   // ER2
-	*(--sp) = 0;				   // ER1
-	*(--sp) = (uint32)thp;		   // thread_initの引数
+	*(--sp) = (uint32)thread_init; // rteで呼び出される -> CPUによってここをPCとして設定される -> エントリー関数を設定
+	// -> スレッドのスタートアップが『thread_init関数』
 
-	thp->context.sp = (uint32)sp; // dispatchに渡される？
+	*(--sp) = 0; // ER6
+	*(--sp) = 0; // ER5
+	*(--sp) = 0; // ER4
+	*(--sp) = 0; // ER3
+	*(--sp) = 0; // ER2
+	*(--sp) = 0; // ER1
+				 // -> 『dispatch関数』の呼び出しと逆順に格納
+
+	//『thread_init関数』の引数
+	*(--sp) = (uint32)thp; // ER0
+
+	// スレッドのコンテキストを設定
+	thp->context.sp = (uint32)sp;
+	// -> 『dispatch関数』の引数
+	//    『スレッドのコンテキスト』は汎用レジスタの復旧に利用される
+	//	   スタックポインタが分かれば復旧できる
 
 	putcurrent(); // 現在のこのthread_runを呼び出したスレッドをレディーキューに戻す, kz_startから呼び出したやつはcurrent==NULLだから，特に影響はない
 
@@ -277,16 +293,36 @@ static int setintr(softvec_type_t type, kz_handler_t handler)
 
 void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 {
+	// カレントスレッドの初期化
 	current = NULL;
+	// カレントスレッドは実行中のスレッドのこと
+	// NULLにすることで何もないことを表現
 
+	// レディーキューの初期化
 	readyque.head = readyque.tail = NULL;
+	// レディーキューは実行可能なスレッド（実行中を含む）のこと
+	// 先頭と末尾をNULLにすることでスレッドが繋がれていないことを表現
+
+	// タスクコントロールブロック(TCB)の初期化
 	memset(threads, 0, sizeof(threads));
+	// TCBはスレッド(タスク)の情報を格納する領域のこと
+	// スレッドがないので全てを０で初期化
+
+	// 割込みハンドラの初期化
 	memset(handlers, 0, sizeof(handlers));
+	// 割込みハンドラは誤動作防止のためすべて０で初期化
 
-	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // 1
-	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // 0
+	// 割込みハンドラの登録
+	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録
+	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // システムコール, 『syscall_intr』関数が呼ばれるように登録
+	// -> 登録した割込みハンドラは直接呼ばれない．割込み要因がシステムコールであろうがダウン要因発生だろうが，必ず『thread_intr関数』が呼ばれる．
+	//    thread_intr関数の中で，『syscall_intr関数』『softerr_intr関数』が呼び分けられる
 
+	// 初期スレッドの作成
 	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
+	// （システムコールを使って初期スレッドを作成したいが，システムコールはスレッドからしか呼べない仕様になっている...）
+	// -> OSの機能(『thread_run関数』)を直接使用して初期スレッドを生成
+	// thread_run関数の説明はその関数にLet's Go
 
 	INTR_ENABLE; // 本にはなかったけど，ここらへんでするべき
 
