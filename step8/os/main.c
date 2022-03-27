@@ -5,14 +5,17 @@
 
 extern int test08_1_main(int argc, char *argv[]);
 
-// どこで呼び出されてる？
+// どこから？
 // 『kozos.c』の『thread_init関数』（init.func）
+// スレッドとして生成されて実行される関数は，すべて『thread_init関数』（init.func）
 static int start_threads(int argc, char *argv[])
 {
 	kz_run(test08_1_main, "command", 0x100, 0, NULL);
 	return 0;
 }
 
+// どこから？
+// 『bootload/main.c』の『main関数（runコマンド内のf()）』
 int main(void)
 {
 	INTR_DISABLE;

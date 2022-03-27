@@ -5,6 +5,8 @@
 // 割込みベクタは，ハンドラ関数へのポインタ（ベクタアドレス）を持つ配列
 // 配列の各インデックスが割込み番号に該当する
 
+// どこから？
+// 『bootload/main.c』の『init関数』
 // ソフトウェア割込みベクタの初期化
 int softvec_init(void)
 {
@@ -19,6 +21,8 @@ int softvec_init(void)
 	return 0;
 }
 
+// どこから？
+// 『interrupt.c』の『softvec_init関数』，『kozos.c』の『setintr関数』
 // ソフトウェア割込みベクタの設定（ハンドラ関数を登録）
 // typeは場所
 int softvec_setintr(softvec_type_t sof_type, softvec_handler_t handler)
@@ -37,6 +41,8 @@ int softvec_setintr(softvec_type_t sof_type, softvec_handler_t handler)
 // ソフトウェア割込みベクタのアドレスを見て，各ハンドラに分岐する
 void interrupt(softvec_type_t type, unsigned long sp)
 {
+	// 現状，SOFTVECS配列には『thread_intr関数』しか入っていない
+	// から必ず『thread_intr関数』が実行される
 	softvec_handler_t handler = SOFTVECS[type];
 	// ソフトウェア割込みベクタが設定されているならば，ハンドラを呼び出す
 	if (handler)

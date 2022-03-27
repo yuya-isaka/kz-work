@@ -115,6 +115,8 @@ static void printval(void)
 	puts("\n");
 }
 
+// どこから？
+// 『bootload/startup.s』の『_start関数』
 int main(void)
 {
 	static char buf[16];

@@ -7,6 +7,8 @@
 	.global _start
 	.type _start, @function
 
+# どこから？
+# CPUの電源ON割り込み，リセット割り込み　<- 『リセットベクタ』
 _start: # ラベル_startの定義
 	mov.l #_bootstack,sp # スタックポインタの設定, ベタガキではなくシンボル参照
 	jsr @_main # main()の呼び出し

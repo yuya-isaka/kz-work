@@ -136,7 +136,7 @@ static void thread_init(kz_thread *thp)
 }
 
 // どこから？
-// 『kozos.c』の『call_function
+// 『kozos.c』の『call_function（0(run)システムコール, sys_type）
 // 新規スレッドの作成（OSの機能，『kz_runシステムコール』で使われる）
 /*
 	- 1. 空いているTCBの検索
@@ -237,7 +237,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 }
 
 // どこから？
-// 『kozos.c』の『call_function関数（1(exit)システムコール)』，『softerr_intr関数』
+// 『kozos.c』の『call_function関数（1(exit)システムコール,sys_type)』，『softerr_intr関数』
 // スレッドを終わらせる
 // システムコール
 static int thread_exit(void)
@@ -314,7 +314,7 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 	// カレントスレッドのコンテキストを保存
 	current->context.sp = sp;
 
-	// syscall_intr() or softerr_intr()
+	// syscall_intr, softerr_intr （システムコール，ソフトウェアエラー）
 	if (handlers[sof_type])
 		handlers[sof_type]();
 
@@ -329,6 +329,11 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 
 // 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
 
+// どこから？
+// 『kozos.c』の『kz_start関数』
+// ↓ 現状は１つだが増えるかも？
+// SOFTVECS配列...thread_intr
+// handlers配列...syscall_intr, softerr_intr (システムコール or ソフトウェアエラー)
 static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 {
 	extern void thread_intr(softvec_type_t sof_type, unsigned long sp);
@@ -386,6 +391,8 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	// 『startup.s』に書かれている
 }
 
+// どこから？
+// 『kozos.c』の『schedule関数』
 void kz_sysdown(void)
 {
 	puts("system error!\n");
