@@ -11,7 +11,8 @@
 	引数．．．スレッド名，　スレッドのスタックサイズ，　関数の引数
 	戻り値．．．生成したスレッドのID番号．　これを『スレッドID』と呼ぶ
 */
-kz_thread_id_t kz_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[]);
+// 優先度追加
+kz_thread_id_t kz_run(kz_func_t func, char *name, int priority, int stacksize, int argc, char *argv[]);
 
 // スレッド終了のシステムコール
 /*
@@ -19,6 +20,17 @@ kz_thread_id_t kz_run(kz_func_t func, char *name, int stacksize, int argc, char 
 	C言語のexit()に相当
 */
 void kz_exit(void);
+
+// カレントスレッドをレディーキューの後ろに繋ぎ直すことでカレントスレッドを切り替える
+int kz_wait(void);
+// スレッドをレディーキューから外してスリープ状態にする
+int kz_sleep(void);
+// スリープ状態のスレッドをレディーキューに繋ぎ直して，レディー状態に戻す
+int kz_wakeup(kz_thread_id_t id);
+// 自分のスレッドIDを取得する
+kz_thread_id_t kz_getid(void);
+// スレッドの優先度を変更する（変更前の優先度が返る）
+int kz_chpri(int priority);
 
 // 初期スレッドを起動し，OSの動作を開始
 /*
@@ -29,7 +41,7 @@ void kz_exit(void);
 	『初期スレッド』と呼ぶことにする
 	スレッドの生成後は，スレッドの動作に入るから，この関数が戻ってくることはない．．．儚い存在
 */
-void kz_start(kz_func_t func, char *name, int stacksize, int arvc, char *argv[]);
+void kz_start(kz_func_t func, char *name, int priority, int stacksize, int arvc, char *argv[]);
 
 // 致命的エラーの時に呼び出す
 /*
@@ -50,6 +62,11 @@ void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 	C言語のmainに相当
 	（本来はkozos.hではなく別ファイルでプロトタイプ宣言するべき）
 */
-int test8_1_main(int argc, char *argv[]);
+int test09_1_main(int argc, char *argv[]);
+int test09_2_main(int argc, char *argv[]);
+int test09_3_main(int argc, char *argv[]);
+extern kz_thread_id_t test09_1_id;
+extern kz_thread_id_t test09_2_id;
+extern kz_thread_id_t test09_3_id;
 
 #endif

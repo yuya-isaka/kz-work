@@ -9,6 +9,8 @@
 #define THREAD_NUM 6
 // スレッド名の最大長
 #define THREAD_NAME_SIZE 15
+// 優先度の個数
+#define PRIORITY_NUM 16
 
 // スレッドコンテキスト
 // スレッドのコンテキスト保存用の構造体の定義
@@ -24,7 +26,11 @@ typedef struct _kz_thread
 {
 	struct _kz_thread *next;		 // レディーキューへの接続に利用するnextポインタ
 	char name[THREAD_NAME_SIZE + 1]; // スレッド名
+	int priority;					 // 優先度
 	char *stack;					 // スレッドのスタック
+	uint32 flags;					 // 各種フラグを管理する変数
+
+#define KZ_THREAD_FLAG_READY (1 << 0) // レディーフラグ
 
 	// スレッドのスタートアップに渡すパラメータ
 	struct
@@ -55,7 +61,7 @@ static struct
 {
 	kz_thread *head;
 	kz_thread *tail;
-} readyque;
+} readyque[PRIORITY_NUM];
 
 static kz_thread *current;						// カレントスレッド（現在実行中のスレッド, TCBへのポインタ）
 static kz_thread threads[THREAD_NUM];			// タスクコントロールブロック（TCB）の実態
@@ -76,14 +82,32 @@ static int getcurrent(void)
 		return -1;
 	}
 
-	// カレントスレッドは必ず先頭
-	readyque.head = current->next;
-	if (readyque.head == NULL)
+	// 既にレディーフラグが落ちてるなら無視
+	// -> なぜなら，フラグが既に落ちてるならレディーキューにないってことだから
+	if (!(current->flags & KZ_THREAD_FLAG_READY))
 	{
-		// headがNULLになった鐡ことは，headとtailが同じとこかつNULLってこと
-		readyque.tail = NULL;
+		// 実行中スレッドがレディーじゃない場合は無視
+		return 1;
 	}
-	current->next = NULL; // エントリをリンクリストから抜き出したからnextポインタをクリアしておく
+
+	// readyque.head = current->next;
+	// if (readyque.head == NULL)
+	// {
+	// 	// headがNULLになった鐡ことは，headとtailが同じとこかつNULLってこと
+	// 	readyque.tail = NULL;
+	// }
+	// カレントスレッドは必ず先頭
+	readyque[current->priority].head = current->next;
+	if (readyque[current->priority].head == NULL)
+	{
+		readyque[current->priority].tail = NULL;
+	}
+	// レディーフラグをマスクする
+	// レディーフラグを落とす
+	// 最下位ビットのみゼロにする
+	current->flags &= ~KZ_THREAD_FLAG_READY;
+	// エントリをリンクリストから抜き出したからnextポインタをクリアしておく
+	current->next = NULL;
 
 	return 0;
 }
@@ -99,18 +123,29 @@ static int putcurrent(void)
 		return -1;
 	}
 
+	// レディービットを参照し，レディービットが立ってるなら何もしない
+	// -> なぜなら，レディービットが立ってるってことは，レディーキューに既に入っているから
+	if (current->flags & KZ_THREAD_FLAG_READY)
+	{
+		return 1;
+	}
+
 	// レディーキューの末尾に接続
-	if (readyque.tail)
+	if (readyque[current->priority].tail)
 	{
 		// 現状の尻尾があるならそこにつなげる
-		readyque.tail->next = current;
+		readyque[current->priority].tail->next = current;
 	}
 	else
 	{
 		// 尻尾がないなら，先頭ってことでよし
-		readyque.head = current;
+		readyque[current->priority].head = current;
 	}
-	readyque.tail = current; // 尻尾後塵
+	readyque[current->priority].tail = current; // 尻尾後塵
+
+	// レディーフラグを立てる
+	// 最下位ビットがたつ
+	current->flags |= KZ_THREAD_FLAG_READY;
 
 	return 0;
 }
@@ -145,7 +180,7 @@ static void thread_init(kz_thread *thp)
 	- 4. スタック領域の初期化
 	- 5. 新規スレッドをレディーキューに接続
 */
-static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
+static kz_thread_id_t thread_run(kz_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
 	int i;
 	kz_thread *thp;
@@ -182,11 +217,13 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 		- 引数
 		- スレッドを再開するためのスタックポインタ
 	*/
-	strcpy(thp->name, name); // スレッド名前
-	thp->next = NULL;		 // 次のスレッド (新規スレッドはレディーキューの末尾に登録されるから，nextは『NULL』)
-	thp->init.func = func;	 // スレッド起動後に呼ばれる関数
-	thp->init.argc = argc;	 // 引数
-	thp->init.argv = argv;	 // 引数
+	strcpy(thp->name, name);  // スレッド名前
+	thp->next = NULL;		  // 次のスレッド (新規スレッドはレディーキューの末尾に登録されるから，nextは『NULL』)
+	thp->priority = priority; // 優先度
+	thp->flags = 0;			  // フラグ
+	thp->init.func = func;	  // スレッド起動後に呼ばれる関数
+	thp->init.argc = argc;	  // 引数
+	thp->init.argv = argv;	  // 引数
 
 	// 3. スレッド用のスタック領域の確保
 	memset(thread_stack, 0, stacksize); // リンカスクリプトで定義された場所を０で事前初期化
@@ -200,7 +237,14 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int stacksize, int 
 	sp = (uint32 *)thp->stack;	  // 設定するときは間接的なspポインタを利用 -> スレッドのコンテキストとしてTCBに設定
 	*(--sp) = (uint32)thread_end; // スレッド終了用 ()
 
-	*(--sp) = (uint32)thread_init; // rteで呼び出される -> CPUによってここをPCとして設定される -> エントリー関数を設定
+	// プログラムカウンタ（エントリー関数）を設定
+	// rteで呼び出される -> CPUによってここをPCとして設定される -> エントリー関数を設定
+	// スレッドの優先度がゼロの場合には，『割り込み禁止スレッド』とする
+	// -> 最上位の１バイトに0xc0が代入される,　24bit(３バイト)左にずらす
+	// CCRが上位１バイトなので，CCRを0xc0にしているのと一緒 -> 立てると割込み無効になる（ CCRの最上位ビット（Iビット，ついでにUIビット））
+	// 立てると割り込み禁止になる．
+	// これは，割り込み処理を行うスレッドで『割り込み禁止で動作させたい』時に利用するためのもの
+	*(--sp) = (uint32)thread_init | ((uint32)(priority ? 0 : 0xc0) << 24);
 	// -> スレッドのスタートアップが『thread_init関数』
 
 	// 汎用レジスタ復旧用の設定
@@ -248,6 +292,61 @@ static int thread_exit(void)
 	return 0;
 }
 
+// call_functionで呼び出されているから，getcurrentが事前に呼ばれてて，カレントスレッドは取り除かれている
+// それを末尾につなげるということは，他のスレッドが一旦スケジューリングされる
+// 『CPUを離す』
+// スレッドの処理内容が重い時に利用できるシステムコール
+// kz_wait()を適当なタイミングで読んで，重い処理を行なっている最中に，他のスレッドを動作させることができる．
+static int thread_wait(void)
+{
+	// レディーキューから一旦外して接続し直すことで，ラウンドロビンで他のスレッドを動作させる
+	putcurrent();
+	return 0;
+}
+
+// 事前にsyscall_procのgetcurrent()でカレントスレッドが抜かれる
+// つまり，カレントスレッドをスリープ状態にする
+static int thread_sleep(void)
+{
+	return 0;
+}
+
+// スレッドをレディー状態に戻すことをウェイクアップ
+// 指定したidをウェイクアップ
+static int thread_wakeup(kz_thread_id_t id)
+{
+	// ウェイクアップを呼び出したスレッドをレディーキューに戻す
+	putcurrent();
+
+	// 指定されたスレッドをレディーキューに接続してウェイクアップ
+	current = (kz_thread *)id;
+	putcurrent();
+
+	return 0;
+}
+
+// thread_waitとは同じ動作
+// しかし，システムコールを実行しているスレッド自身のスレッドIDが返る
+// 他のスレッドを動作させつつ，IDを取得
+static kz_thread_id_t thread_getid(void)
+{
+	putcurrent();
+	// TCBのアドレスがスレッドIDとなる
+	return (kz_thread_id_t)current;
+}
+
+// カレントスレッドを，優先度を変更してレディーキューに接続する．
+static int thread_chpri(int priority)
+{
+	int old = current->priority;
+	if (priority >= 0)
+		// 優先度変更
+		current->priority = priority;
+	// 新しい優先度のレディーキューに繋ぎ直す
+	putcurrent();
+	return old;
+}
+
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
 // どこから？
@@ -258,10 +357,25 @@ static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 	switch (sys_type)
 	{
 	case KZ_SYSCALL_TYPE_RUN: // kz_run
-		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
+		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.priority, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
 		break;
 	case KZ_SYSCALL_TYPE_EXIT: // kz_exit
 		thread_exit();
+		break;
+	case KZ_SYSCALL_TYPE_WAIT: // kz_wait
+		p->un.wait.ret = thread_wait();
+		break;
+	case KZ_SYSCALL_TYPE_SLEEP: // kz_sleep
+		p->un.sleep.ret = thread_sleep();
+		break;
+	case KZ_SYSCALL_TYPE_WAKEUP: // kz_wakeup
+		p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
+		break;
+	case KZ_SYSCALL_TYPE_GETID: // kz_getid
+		p->un.getid.ret = thread_getid();
+		break;
+	case KZ_SYSCALL_TYPE_CHPRI: // kz_chpri
+		p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
 		break;
 	default:
 		break;
@@ -289,10 +403,21 @@ static void syscall_intr(void)
 // 『kozos.c』の『thread_intr関数
 static void schedule(void)
 {
-	if (!readyque.head) // 次に実行するスレッドがなかったら終わり
+	int i;
+
+	// 優先度の高い順（優先度の数値の小さい順）にレディーキューを見て，動作可能なスレッドを検索する
+	for (i = 0; i < PRIORITY_NUM; i++)
+	{
+		// 見つかったら終わり
+		if (readyque[i].head)
+			break;
+	}
+
+	// 次に実行するスレッドがなかったら終わり
+	if (i == PRIORITY_NUM)
 		kz_sysdown();
 
-	current = readyque.head;
+	current = readyque[i].head;
 }
 
 // どこから？
