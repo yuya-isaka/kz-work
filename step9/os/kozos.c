@@ -400,7 +400,7 @@ static void syscall_intr(void)
 }
 
 // どこから？
-// 『kozos.c』の『thread_intr関数
+// 『kozos.c』の『thread_intr関数』
 static void schedule(void)
 {
 	int i;
@@ -417,6 +417,7 @@ static void schedule(void)
 	if (i == PRIORITY_NUM)
 		kz_sysdown();
 
+	// カレントスレッドに設定
 	current = readyque[i].head;
 }
 
@@ -474,7 +475,7 @@ static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 
 // どこから？
 // 『main.c』の『main関数』
-void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
+void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
 	// カレントスレッドの初期化
 	current = NULL;
@@ -482,7 +483,9 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	// NULLにすることで何もないことを表現
 
 	// レディーキューの初期化
-	readyque.head = readyque.tail = NULL;
+	// readyque.head = readyque.tail = NULL;
+	// 配列になったので，memset()でゼロクリア
+	memset(readyque, 0, sizeof(readyque));
 	// レディーキューは実行可能なスレッド（実行中を含む）のこと
 	// 先頭と末尾をNULLにすることでスレッドが繋がれていないことを表現
 
@@ -503,7 +506,7 @@ void kz_start(kz_func_t func, char *name, int stacksize, int argc, char *argv[])
 	//    thread_intr関数の中で，『syscall_intr関数』『softerr_intr関数』が呼び分けられる
 
 	// 初期スレッドの新規作成
-	current = (kz_thread *)thread_run(func, name, stacksize, argc, argv);
+	current = (kz_thread *)thread_run(func, name, priority, stacksize, argc, argv);
 	// （システムコールを使って初期スレッドを作成したいが，システムコールはスレッドからしか呼べない仕様になっている...）
 	// -> OSの機能(『thread_run関数』)を直接使用して初期スレッドを生成
 	// thread_run関数の説明はその関数にLet's Go
