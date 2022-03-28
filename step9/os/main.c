@@ -12,6 +12,7 @@ extern int test08_1_main(int argc, char *argv[]);
 // どこから？
 // 『kozos.c』の『thread_init関数』（init.func）
 // スレッドとして生成されて実行される関数は，すべて『thread_init関数』（init.func）
+// 初期スレッドである『start_threads関数』はアイドルスレッドとなる
 static int start_threads(int argc, char *argv[])
 {
 	// kz_run(test08_1_main, "command", 0x100, 0, NULL);
@@ -24,9 +25,11 @@ static int start_threads(int argc, char *argv[])
 	kz_chpri(15);
 
 	// 割り込み有効
+	// 有効にしてアイドルスレッドに切り替える
 	INTR_ENABLE;
 
 	// このスレッドを省電力で永遠に動作
+	// 初期スレッドがここで，アイドルスレッドに移行するような構成にしている (スレッドをまとめることで，メモリのスタック領域を節約)
 	while (1)
 	{
 		// 省電力モードに移行
