@@ -511,9 +511,6 @@ void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc,
 	// -> OSの機能(『thread_run関数』)を直接使用して初期スレッドを生成
 	// thread_run関数の説明はその関数にLet's Go
 
-	// 割込み有効化
-	INTR_ENABLE; // 本にはなかったけど，ここらへんでするべき
-
 	// スレッド処理再開（上の『thread_run』で新規作成したスレッドを処理開始）
 	dispatch(&current->context);
 	// 『startup.s』に書かれている

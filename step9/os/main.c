@@ -3,6 +3,10 @@
 #include "interrupt.h"
 #include "lib.h"
 
+kz_thread_id_t test09_1_id;
+kz_thread_id_t test09_2_id;
+kz_thread_id_t test09_3_id;
+
 extern int test08_1_main(int argc, char *argv[]);
 
 // どこから？
@@ -10,7 +14,25 @@ extern int test08_1_main(int argc, char *argv[]);
 // スレッドとして生成されて実行される関数は，すべて『thread_init関数』（init.func）
 static int start_threads(int argc, char *argv[])
 {
-	kz_run(test08_1_main, "command", 0x100, 0, NULL);
+	// kz_run(test08_1_main, "command", 0x100, 0, NULL);
+	//       			メイン関数　　　　名前　　　優先番号　　スタックサイズ    argc   argv
+	test09_1_id = kz_run(test09_1_main, "test09_1", 1, 0x100, 0, NULL);
+	test09_2_id = kz_run(test09_2_main, "test09_2", 2, 0x100, 0, NULL);
+	test09_3_id = kz_run(test09_3_main, "test09_3", 3, 0x100, 0, NULL);
+
+	// start_threadsスレッドの優先順位を下げて，アイドルスレッドに移行する（優先順位を最低にする）
+	kz_chpri(15);
+
+	// 割り込み有効
+	INTR_ENABLE;
+
+	// このスレッドを省電力で永遠に動作
+	while (1)
+	{
+		// 省電力モードに移行
+		asm volatile("sleep");
+	}
+
 	return 0;
 }
 
@@ -24,7 +46,8 @@ int main(void)
 
 	// "start"という名前のスレッドが，start_threads()をメイン関数として動作開始
 	//       メイン関数　　　　名前　　　スタックサイズ    argc   argv
-	kz_start(start_threads, "start", 0x100, 0, NULL);
+	kz_start(start_threads, "idle", 0, 0x100, 0, NULL);
+	// 『start_thrads関数』は割込み禁止として，実行させたい．
 
 	return 0;
 }
