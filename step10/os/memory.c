@@ -13,7 +13,7 @@ typedef struct _kzmem_block
 {
 	// 次のメモリ領域のポインタ
 	struct _kzmem_block *next;
-	// 実際の大きさ
+	// ブロックがどのプールに所属するか，情報を持たせておく．メモリ解放の時に使う
 	int size;
 } kzmem_block;
 
@@ -23,6 +23,7 @@ typedef struct _kzmem_block
 */
 typedef struct _kzmem_pool
 {
+	// メモリプールのサイズ（メモリ解放の時に，対象のブロックがどのプールに属するか確認するときに使う）
 	// 16 or 32 or 64
 	// このサイズにはメモリ・ヘッダも含まれているため，メモリブロック中で実際に利用できるのはメモリ・ヘッダ（sizeof(kzmem_block)==8）を引いたバイト数になる．
 	int size;
@@ -156,3 +157,31 @@ void *kzmem_alloc(int size)
 	return NULL;
 }
 
+// データ領域を指すメモリアドレスが渡される．汎用ポインタで受け取る．
+void kzmem_free(void *mem)
+{
+	int i;
+	kzmem_block *mp;
+	kzmem_pool *p;
+
+	// 領域の直前にある（はずの）メモリブロック構造体を取得（ヘッダ）
+	// kzmem_blockポインタで『キャスト』してから-1することで，ヘッダの先頭を取得できる．
+	mp = ((kzmem_block *)mem - 1);
+
+	for (i = 0; i < MEMORY_AREA_NUM; i++)
+	{
+		p = &pool[i];
+		// どのプールか調べる
+		if (mp->size == p->size)
+		{
+			// 解放済みリンクリストの先頭につなげる（再利用可能になる）
+			// mpの次に今の先頭を
+			mp->next = p->free;
+			// 先頭をmpに更新
+			p->free = mp;
+			return;
+		}
+	}
+
+	kz_sysdown();
+}
