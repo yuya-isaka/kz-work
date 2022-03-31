@@ -68,6 +68,11 @@ static int kzmem_init_pool(kzmem_pool *p)
 		 --------------
 	*/
 
+	/*
+		- mpp自体のアドレスは，　プールごとの解放済みリストの先頭アドレス
+		- mppに格納するアドレスは， 領域の構造体のアドレス
+	*/
+
 	// 解放済みリストの先頭
 	// ①『まずアドレスを決める』
 	mpp = &p->free;
@@ -78,12 +83,14 @@ static int kzmem_init_pool(kzmem_pool *p)
 		// ②『あとで中身を格納』
 		*mpp = mp;
 		// 切り分けた領域を初期化
+		// ③『格納後に初期化』 (ヘッダだけ初期化してないか？, mp+p->size分の初期化はしていないはず．．)
 		memset(mp, 0, sizeof(*mp));
 		mp->size = p->size;
 		// 解放済みリンクリストの次
 		// ① 『まずアドレスを決める』
 		mpp = &(mp->next);
 		// 切り分け更新
+		// 更新する際は，用意しているメモリプールサイズを確保（ヘッダだけ(sizeof(*mp))だけではダメ）
 		mp = (kzmem_block *)((char *)mp + p->size);
 		// 最初に切り分ける箇所を更新
 		area += p->size;
@@ -103,3 +110,49 @@ int kzmem_init(void)
 	}
 	return 0;
 }
+
+// 動的メモリの確保
+void *kzmem_alloc(int size)
+{
+	int i;
+	kzmem_block *mp;
+	kzmem_pool *p;
+
+	for (i = 0; i < MEMORY_AREA_NUM; i++)
+	{
+		// なぜポインタ？
+		// コピーによる余計な変数の使用をなくすためか
+		p = &pool[i];
+		// 要求されたサイズが収まるかチェック
+		// 用意したメモリプールサイズ - メモリヘッダ
+		if (size <= p->size - sizeof(kzmem_block))
+		{
+			// 解放済み領域がない（メモリブロック不足）
+			if (p->free == NULL)
+			{
+				// メモリ枯渇
+				kz_sysdown();
+				return NULL;
+			}
+			// 解放済みリンクリストから領域を取得
+			mp = p->free;
+			// リンクリストの更新（先頭を変える）
+			// リンクリストから抜き出す
+			p->free = p->free->next;
+			// リンクリストから抜き出したmpはnextを持たない
+			// 安全のためにNULLクリア
+			mp->next = NULL;
+
+			// 実際に利用可能な領域は，メモリブロック構造体（メモリヘッダ）の直後の領域になる．
+			// ので直後のアドレスを返す．
+			// 初期化はされてなさそう？
+			return mp + 1;
+		}
+	}
+
+	// 指定されたサイズの領域を格納できるメモリプールが無い
+	// 64より大きい
+	kz_sysdown();
+	return NULL;
+}
+
