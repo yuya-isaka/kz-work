@@ -281,7 +281,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int priority, int s
 }
 
 // どこから？
-// 『kozos.c』の『call_function関数（1(exit)システムコール,sys_type)』，『softerr_intr関数』
+// 『kozos.c』の『call_function関数（1(exit)システムコール(KZ_SYSCALL_TYPE_EXIT),sys_type)』，『softerr_intr関数』
 // スレッドを終わらせる
 // システムコール
 static int thread_exit(void)
@@ -292,6 +292,8 @@ static int thread_exit(void)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（2(wait)システムコール(KZ_SYSCALL_TYPE_WAIT),sys_type)』
 // call_functionで呼び出されているから，getcurrentが事前に呼ばれてて，カレントスレッドは取り除かれている
 // それを末尾につなげるということは，他のスレッドが一旦スケジューリングされる
 // 『CPUを離す』
@@ -304,6 +306,8 @@ static int thread_wait(void)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（3(sleep)システムコール(KZ_SYSCALL_TYPE_SLEEP),sys_type)』
 // 事前にsyscall_procのgetcurrent()でカレントスレッドが抜かれる
 // つまり，カレントスレッドをスリープ状態にする
 static int thread_sleep(void)
@@ -311,6 +315,8 @@ static int thread_sleep(void)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（4(wakeup)システムコール(KZ_SYSCALL_TYPE_WAKEUP),sys_type)』
 // スレッドをレディー状態に戻すことをウェイクアップ
 // 指定したidをウェイクアップ
 static int thread_wakeup(kz_thread_id_t id)
@@ -325,6 +331,8 @@ static int thread_wakeup(kz_thread_id_t id)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（5(getid)システムコール(KZ_SYSCALL_TYPE_GETID),sys_type)』
 // thread_waitとは同じ動作
 // しかし，システムコールを実行しているスレッド自身のスレッドIDが返る
 // 他のスレッドを動作させつつ，IDを取得
@@ -335,6 +343,8 @@ static kz_thread_id_t thread_getid(void)
 	return (kz_thread_id_t)current;
 }
 
+// どこから？
+// 『kozos.c』の『call_function関数（6(chpri)システムコール(KZ_SYSCALL_TYPE_CHPRI),sys_type)』
 // カレントスレッドを，優先度を変更してレディーキューに接続する．
 static int thread_chpri(int priority)
 {
@@ -352,6 +362,7 @@ static int thread_chpri(int priority)
 // どこから？
 // 『kozos.c』の『syscall_proc関数』
 // システムコールの種別に応じた処理が行われる．
+// -> thread_? が呼ばれる
 static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 {
 	switch (sys_type)

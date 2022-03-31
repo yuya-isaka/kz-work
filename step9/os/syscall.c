@@ -29,6 +29,8 @@ void kz_exit(void)
 	kz_syscall(KZ_SYSCALL_TYPE_EXIT, NULL);
 }
 
+// どこから？
+// 『test09_1_main関数』『test09_2main関数』『test09_3_main関数』
 int kz_wait(void)
 {
 	kz_syscall_param_t param;
@@ -36,6 +38,8 @@ int kz_wait(void)
 	return param.un.wait.ret;
 }
 
+// どこから？
+// 『test09_1_main関数』『test09_2main関数』
 int kz_sleep(void)
 {
 	kz_syscall_param_t param;
@@ -43,6 +47,8 @@ int kz_sleep(void)
 	return param.un.sleep.ret;
 }
 
+// どこから？
+// 『test09_3_main関数』
 int kz_wakeup(kz_thread_id_t id)
 {
 	kz_syscall_param_t param;
@@ -51,6 +57,7 @@ int kz_wakeup(kz_thread_id_t id)
 	return param.un.wakeup.ret;
 }
 
+// どこから？
 kz_thread_id_t kz_getid(void)
 {
 	kz_syscall_param_t param;
@@ -58,6 +65,8 @@ kz_thread_id_t kz_getid(void)
 	return param.un.getid.ret;
 }
 
+// どこから？
+// 『test09_1_main関数』『test09_2main関数』
 int kz_chpri(int priority)
 {
 	kz_syscall_param_t param;
