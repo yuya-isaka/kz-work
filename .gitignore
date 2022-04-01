@@ -18,3 +18,9 @@ xmodem.o
 elf.o
 interrupt.o
 intr.o
+kozos.o
+syscall.o
+test08_1.o
+test09_1.o
+test09_2.o
+test09_3.o
