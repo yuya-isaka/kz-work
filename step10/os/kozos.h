@@ -32,7 +32,7 @@ kz_thread_id_t kz_getid(void);
 // スレッドの優先度を変更する（変更前の優先度が返る）
 int kz_chpri(int priority);
 // 領域を確保
-void *kz_malloc(int size);
+void *kz_kmalloc(int size);
 // 領域を解放
 int kz_kmfree(void *p);
 
