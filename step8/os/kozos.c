@@ -334,9 +334,10 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 // ↓ 現状は１つだが増えるかも？
 // SOFTVECS配列...thread_intr
 // handlers配列...syscall_intr, softerr_intr (システムコール or ソフトウェアエラー)
+static void thread_intr(softvec_type_t sof_type, unsigned long sp);
+
 static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 {
-	extern void thread_intr(softvec_type_t sof_type, unsigned long sp);
 
 	softvec_setintr(sof_type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
 
