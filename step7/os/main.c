@@ -51,7 +51,7 @@ int main(void)
 	softvec_setintr(SOFTVEC_TYPE_SERINTR, intr);
 
 	// シリアル受信割込みを有効化
-	sefal_intr_recv_enable(SERIAL_DEFAULT_DEVICE);
+	serial_intr_recv_enable(SERIAL_DEFAULT_DEVICE);
 
 	puts("> ");
 
