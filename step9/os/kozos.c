@@ -466,6 +466,8 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 
 // 割り込みハンドラの登録 -------------------------------------------------------------------------------------------------
 
+
+static void thread_intr(softvec_type_t sof_type, unsigned long sp);
 // どこから？
 // 『kozos.c』の『kz_start関数』
 // ↓ 現状は１つだが増えるかも？
@@ -473,7 +475,6 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 // handlers配列...syscall_intr, softerr_intr (システムコール or ソフトウェアエラー)
 static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 {
-	extern void thread_intr(softvec_type_t sof_type, unsigned long sp);
 
 	softvec_setintr(sof_type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
 
