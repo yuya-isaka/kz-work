@@ -16,3 +16,5 @@ startup.o
 vector.o
 xmodem.o
 elf.o
+interrupt.o
+intr.o
