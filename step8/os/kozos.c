@@ -308,6 +308,7 @@ static void softerr_intr(void)
 
 // どこから？
 // 『interrupt.c』の『interrupt関数』から（thread_intrがSOFTVECS配列に登録されている）
+// 関数ポインタ変数経由で実行するので，staticで問題ない
 // 割込みハンドラ＝＝OSの処理
 static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 {
