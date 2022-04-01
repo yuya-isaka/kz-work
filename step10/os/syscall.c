@@ -83,16 +83,16 @@ void *kz_kmalloc(int size)
 {
 	kz_syscall_param_t param;
 	param.un.kmalloc.size = size;
-	kz_sysall(KZ_SYSCALL_TYPE_KMALLOC, &param);
+	kz_syscall(KZ_SYSCALL_TYPE_KMALLOC, &param);
 	return param.un.kmalloc.ret;
 }
 
 // メモリ領域の解放用関数
 // kz_kmallocによって獲得した領域のアドレスを渡すことで，その領域を解放する．解放した領域は対象ブロックが所属する解放済みリンクリストに接続され，再度獲得が行われたときに再利用される．
-int *kz_kmfree(void *p)
+int kz_kmfree(void *p)
 {
 	kz_syscall_param_t param;
 	param.un.kmfree.p = p;
-	kz_sysall(KZ_SYSCALL_TYPE_KMFREE, &param);
+	kz_syscall(KZ_SYSCALL_TYPE_KMFREE, &param);
 	return param.un.kmfree.ret;
 }
