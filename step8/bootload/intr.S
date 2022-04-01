@@ -130,13 +130,15 @@ _intr_syscall:
 # シリアル割込みハンドラ ------------------------------------------ ブートローダー側で準備
 
 	.global	_intr_serintr
-	.type	_intr_serintr, @function 	# なくてもいい，　デバッグよう
+ 	# なくてもいい，　デバッグよう
+	.type	_intr_serintr, @function
 
 # どこから？
 # シリアル通信が発生したら
 _intr_serintr:
 	# シリアル割込みを呼び出したスレッドの『汎用レジスタ』を，　スレッドのスタック領域に退避
-	mov.l	er6, @-er7 # 格納したら4バイト減算
+	# 格納したら4バイト減算
+	mov.l	er6, @-er7
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
 	mov.l	er3, @-er7
