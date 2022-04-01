@@ -89,7 +89,8 @@ _intr_syscall:
 # シリアル割込みハンドラ ------------------------------------------ ブートローダー側で準備
 
 	.global	_intr_serintr
-	.type	_intr_serintr, @function 	# なくてもいい，　デバッグよう
+	# なくてもいい，　デバッグよう
+	.type	_intr_serintr, @function
 
 _intr_serintr:
 	mov.l	er6, @-er7
@@ -101,7 +102,8 @@ _intr_serintr:
 	mov.l	er0, @-er7
 
 	mov.l	er7, er1
-	mov.w	#SOFTVEC_TYPE_SERINTR, r0 # interrupt.cの関数interrupt()
+	# interrupt.cの関数interrupt()
+	mov.w	#SOFTVEC_TYPE_SERINTR, r0
 	jsr		@_interrupt
 
 	mov.l	@er7+, er0
