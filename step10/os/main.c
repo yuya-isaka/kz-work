@@ -3,11 +3,10 @@
 #include "interrupt.h"
 #include "lib.h"
 
-kz_thread_id_t test09_1_id;
-kz_thread_id_t test09_2_id;
-kz_thread_id_t test09_3_id;
+// kz_thread_id_t test09_1_id;
+// kz_thread_id_t test09_2_id;
+// kz_thread_id_t test09_3_id;
 
-extern int test08_1_main(int argc, char *argv[]);
 
 // どこから？
 // 『kozos.c』の『thread_init関数』（init.func）
@@ -19,9 +18,10 @@ static int start_threads(int argc, char *argv[])
 
 	// kz_run(test08_1_main, "command", 0x100, 0, NULL);
 	//       			メイン関数　　　　名前　　　優先番号　　スタックサイズ    argc   argv
-	test09_1_id = kz_run(test09_1_main, "test09_1", 1, 0x100, 0, NULL);
-	test09_2_id = kz_run(test09_2_main, "test09_2", 2, 0x100, 0, NULL);
-	test09_3_id = kz_run(test09_3_main, "test09_3", 3, 0x100, 0, NULL);
+	// test09_1_id = kz_run(test09_1_main, "test09_1", 1, 0x100, 0, NULL);
+	// test09_2_id = kz_run(test09_2_main, "test09_2", 2, 0x100, 0, NULL);
+	// test09_3_id = kz_run(test09_3_main, "test09_3", 3, 0x100, 0, NULL);
+	kz_run(test10_1_main, "test10_1", 1, 0x100, 0, NULL);
 
 	// start_threadsスレッドの優先順位を下げて，アイドルスレッドに移行する（優先順位を最低にする）
 	kz_chpri(15);

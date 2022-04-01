@@ -4,6 +4,7 @@
 #include "interrupt.h"
 #include "syscall.h"
 #include "lib.h"
+#include "memory.h"
 
 // TCBの個数
 #define THREAD_NUM 6
@@ -357,6 +358,23 @@ static int thread_chpri(int priority)
 	return old;
 }
 
+// 動的メモリ獲得
+static void *thread_kmalloc(int size)
+{
+	// システムコールを呼び出した関数をレディーキューに戻す
+	putcurrent();
+	return kzmem_alloc(size);
+}
+
+// メモリ解放
+// charで受け取るんか．．
+static int thread_kmfree(char *p)
+{
+	kzmem_free(p);
+	putcurrent();
+	return 0;
+}
+
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
 // どこから？
@@ -387,6 +405,12 @@ static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 		break;
 	case KZ_SYSCALL_TYPE_CHPRI: // kz_chpri
 		p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
+		break;
+	case KZ_SYSCALL_TYPE_KMALLOC: // kz_kmalloc
+		p->un.kmalloc.ret = thread_kmalloc(p->un.kmalloc.size);
+		break;
+	case KZ_SYSCALL_TYPE_KMFREE: // kz_kmree
+		p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
 		break;
 	default:
 		break;
@@ -488,6 +512,9 @@ static int setintr(softvec_type_t sof_type, kz_handler_t handler)
 // 『main.c』の『main関数』
 void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc, char *argv[])
 {
+	// メモリプールの初期化
+	kzmem_init();
+
 	// カレントスレッドの初期化
 	current = NULL;
 	// カレントスレッドは実行中のスレッドのこと

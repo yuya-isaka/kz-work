@@ -31,6 +31,10 @@ int kz_wakeup(kz_thread_id_t id);
 kz_thread_id_t kz_getid(void);
 // スレッドの優先度を変更する（変更前の優先度が返る）
 int kz_chpri(int priority);
+// 領域を確保
+void *kz_malloc(int size);
+// 領域を解放
+int kz_kmfree(void *p);
 
 // 初期スレッドを起動し，OSの動作を開始
 /*
@@ -62,11 +66,13 @@ void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 	C言語のmainに相当
 	（本来はkozos.hではなく別ファイルでプロトタイプ宣言するべき）
 */
-int test09_1_main(int argc, char *argv[]);
-int test09_2_main(int argc, char *argv[]);
-int test09_3_main(int argc, char *argv[]);
-extern kz_thread_id_t test09_1_id;
-extern kz_thread_id_t test09_2_id;
-extern kz_thread_id_t test09_3_id;
+// extern int test08_1_main(int argc, char *argv[]);
+// int test09_1_main(int argc, char *argv[]);
+// int test09_2_main(int argc, char *argv[]);
+// int test09_3_main(int argc, char *argv[]);
+// extern kz_thread_id_t test09_1_id;
+// extern kz_thread_id_t test09_2_id;
+// extern kz_thread_id_t test09_3_id;
+int test10_1_main(int argc, char *argv[]);
 
 #endif
