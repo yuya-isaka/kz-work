@@ -36,7 +36,8 @@ _intr_softerr:
 	# -> ポインタ値を渡すから３２ビット整数 (H8/3069Fのアドレス範囲は24ビット（16Mバイト）)
 	# -> -mint32オプションをつけてコンパイルしたら，　1ワードを32ビットと扱い， int型にERxという32ビットレジスタが割り当てられる (本書では利用しない)
 	# -> 一応上のオプションを考慮して， interrupt.hでは　割込みの種別はshort型として定義してある
-	mov.l	er7, er1 # er7 -> er1
+	# er7 -> er1
+	mov.l	er7, er1
 
 	# 割り込みスタックを利用するよーって宣言，これで切り替わるっぽい
 	mov.l	#_intrstack, sp
@@ -83,7 +84,7 @@ _intr_softerr:
 # スタック領域は『割込みスタック領域(0xffff00)』と『スレッドスタック領域(0xfff400)』がある
 _intr_syscall:
 	# システムコールを呼び出したスレッドの『汎用レジスタ』を，　スレッドのスタック領域に退避
-	mov.l	er6, @-er7 # 格納したら4バイト減算
+	mov.l	er6, @-er7
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
 	mov.l	er3, @-er7
@@ -130,13 +131,15 @@ _intr_syscall:
 # シリアル割込みハンドラ ------------------------------------------ ブートローダー側で準備
 
 	.global	_intr_serintr
-	.type	_intr_serintr, @function 	# なくてもいい，　デバッグよう
+ 	# なくてもいい，　デバッグよう
+	.type	_intr_serintr, @function
 
 # どこから？
 # シリアル通信が発生したら
 _intr_serintr:
 	# シリアル割込みを呼び出したスレッドの『汎用レジスタ』を，　スレッドのスタック領域に退避
-	mov.l	er6, @-er7 # 格納したら4バイト減算
+	# 格納したら4バイト減算
+	mov.l	er6, @-er7
 	mov.l	er5, @-er7
 	mov.l	er4, @-er7
 	mov.l	er3, @-er7
