@@ -6,7 +6,7 @@
 #include "lib.h"
 #include "memory.h"
 
-// TCBの個数
+// スレッドの最大個数
 #define THREAD_NUM 6
 // スレッド名の最大長
 #define THREAD_NAME_SIZE 15
@@ -22,6 +22,8 @@ typedef struct _kz_context
 	uint32 sp;
 } kz_context;
 
+#define KZ_THREAD_FLAG_READY (1 << 0) // レディーフラグ
+
 // タスク・コントロール・ブロック（TCB）
 typedef struct _kz_thread
 {
@@ -30,8 +32,6 @@ typedef struct _kz_thread
 	int priority;					 // 優先度
 	char *stack;					 // スレッドのスタック
 	uint32 flags;					 // 各種フラグを管理する変数
-
-#define KZ_THREAD_FLAG_READY (1 << 0) // レディーフラグ
 
 	// スレッドのスタートアップに渡すパラメータ
 	struct
@@ -52,6 +52,42 @@ typedef struct _kz_thread
 	kz_context context;
 } kz_thread;
 
+// メッセージバッファ
+// メッセージ１つに相当
+typedef struct _kz_msgbuf
+{
+	struct _kz_msgbuf *next;
+	// メッセージを送信したスレッド
+	kz_thread *sender;
+	// メッセージのパラメータ保存領域
+	struct
+	{
+		int size;
+		char *p;
+	} param;
+} kz_msgbuf;
+
+// メッセージボックス
+// メッセージIDごとに用意される
+typedef struct
+{
+	// 受信待ち状態のスレッド（ウェイクアップされるスレッド）
+	kz_thread *receiver;
+	// メッセージ・キュー
+	kz_msgbuf *head;
+	// 終端のエントリを記憶しておくことで，終端のnextに即座に連結できる設計にしている
+	kz_msgbuf *tail;
+
+	/*
+		H8は16ビットCPUなので，32ビット整数に対しての乗算命令がない．
+		よって，構造体のサイズが2の累乗になっていなと，構造体の配列のインデックス計算が乗算が使われて「__mulsi3がない」などのリンクエラーになる場合がある．
+		（2の累乗ならシフト演算が利用されるので問題ない）
+		対策として，サイズが2の累乗になるようにダミーメンバで調整する
+		他構造体で同様のエラーが出た場合には，同様の処理を使用
+	*/
+	long dummy[1];
+} kz_msgbox;
+
 // スレッドのレディー・キュー
 // TCBを繋いでいるキュー
 // カレントスレッドの実行に区切りがついたらシステムコールが発行され，レディーキューの終端につなげられる
@@ -64,9 +100,17 @@ static struct
 	kz_thread *tail;
 } readyque[PRIORITY_NUM];
 
-static kz_thread *current;						// カレントスレッド（現在実行中のスレッド, TCBへのポインタ）
-static kz_thread threads[THREAD_NUM];			// タスクコントロールブロック（TCB）の実態
+// 現在のスレッド
+static kz_thread *current; // カレントスレッド（現在実行中のスレッド, TCBへのポインタ）
+// スレッドの実体
+// スレッドの個数分用意
+static kz_thread threads[THREAD_NUM]; // タスクコントロールブロック（TCB）の実体
+// ハンドラの実体
+// ハンドラの個数分用意 -> 3個（システムコール，ソフトエラー，シリアル割込み）
 static kz_handler_t handlers[SOFTVEC_TYPE_NUM]; // OSが管理する割り込みハンドラ
+// メッセージボックスの実体
+// メッセージIDの個数分用意
+static kz_msgbox msgboxes[MSGBOX_ID_NUM];
 
 // スレッドのディスパッチ用関数（実態はstartup.sにアセンブラで記述）
 void dispatch(kz_context *context);
@@ -196,7 +240,7 @@ static kz_thread_id_t thread_run(kz_func_t func, char *name, int priority, int s
 	{
 		thp = &threads[i];
 		// 見つかった！
-		if (!thp->init.func) // 空いているTCBはinit.funcが登録されていない
+		if (!thp->init.func) // 空いているスレッドはinit.funcが登録されていない
 			break;
 	}
 

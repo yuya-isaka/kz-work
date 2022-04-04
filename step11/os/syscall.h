@@ -3,6 +3,7 @@
 
 #include "defines.h"
 
+// システムコールたち
 typedef enum
 {
 	KZ_SYSCALL_TYPE_RUN = 0,
@@ -14,8 +15,11 @@ typedef enum
 	KZ_SYSCALL_TYPE_CHPRI,
 	KZ_SYSCALL_TYPE_KMALLOC,
 	KZ_SYSCALL_TYPE_KMFREE,
+	KZ_SYSCALL_TYPE_SEND,
+	KZ_SYSCALL_TYPE_RECV,
 } kz_syscall_type_t;
 
+// システムコールのパラメータ領域
 typedef struct
 {
 	union
@@ -66,6 +70,20 @@ typedef struct
 			char *p;
 			int ret;
 		} kmfree;
+		struct
+		{
+			kz_msgbox_id_t id;
+			int size;
+			char *p;
+			int ret;
+		} send;
+		struct
+		{
+			kz_msgbox_id_t id;
+			int *sizep;
+			char **pp;
+			kz_thread_id_t ret;
+		} recv;
 	} un;
 } kz_syscall_param_t;
 

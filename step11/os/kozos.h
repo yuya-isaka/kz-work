@@ -35,6 +35,10 @@ int kz_chpri(int priority);
 void *kz_kmalloc(int size);
 // 領域を解放
 int kz_kmfree(void *p);
+// メッセージ送信
+int kz_send(kz_msgbox_id_t msg_id, int size, char *p);
+// メッセージ受信
+kz_thread_id_t kz_recv(kz_msgbox_id_t msg_id, int *sizep, char **pp);
 
 // 初期スレッドを起動し，OSの動作を開始
 /*
@@ -73,6 +77,8 @@ void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 // extern kz_thread_id_t test09_1_id;
 // extern kz_thread_id_t test09_2_id;
 // extern kz_thread_id_t test09_3_id;
-int test10_1_main(int argc, char *argv[]);
+// int test10_1_main(int argc, char *argv[]);
+int test11_1_main(int argc, char *argv[]);
+int test11_2_main(int argc, char *argv[]);
 
 #endif

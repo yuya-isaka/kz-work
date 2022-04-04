@@ -6,7 +6,10 @@
 // アプリケーションプログラムから使われることを想定している
 // システムコールはいわば便利な『API』的なもの
 
-// それぞれの実際のシステムコールたちは，『構造体』の中身を確認しながら実行する
+// 適切な引数を渡して，パラメータ設定をしてから，システムコールが実行されるような設計
+// (それぞれつかう引数は限られているので，構造体の中はunionで確保されている)
+
+// OSが提供する関数たちなので，一応kozos.hにプロトタイプ宣言をしていますと．
 
 // どこから呼び出されてる？
 // 『main.c』の『start_threads関数』
@@ -99,4 +102,24 @@ int kz_kmfree(void *p)
 	param.un.kmfree.p = p;
 	kz_syscall(KZ_SYSCALL_TYPE_KMFREE, &param);
 	return param.un.kmfree.ret;
+}
+
+int kz_send(kz_msgbox_id_t msg_id, int size, char *p)
+{
+	kz_syscall_param_t param;
+	param.un.send.id = msg_id;
+	param.un.send.size = size;
+	param.un.send.p = p;
+	kz_syscall(KZ_SYSCALL_TYPE_SEND, &param);
+	return param.un.recv.ret;
+}
+
+kz_thread_id_t kz_recv(kz_msgbox_id_t msg_id, int *sizep, char **pp)
+{
+	kz_syscall_param_t param;
+	param.un.recv.id = msg_id;
+	param.un.recv.sizep = sizep;
+	param.un.recv.pp = pp;
+	kz_syscall(KZ_SYSCALL_TYPE_RECV, &param);
+	return param.un.recv.ret;
 }
