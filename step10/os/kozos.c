@@ -114,7 +114,7 @@ static int getcurrent(void)
 }
 
 // どこから？
-// 『kozos.c』の『thread_run関数』
+// 『kozos.c』の『thread_???関数』
 // カレントスレッドをレディーキューに繋げる（エンキュー）
 // レディーキューの末尾にカレントスレッドをつなげる
 static int putcurrent(void)
