@@ -117,7 +117,7 @@ int kzmem_init(void)
 }
 
 // どこから？
-// 『kozos.c』の『thread_kmalloc関数』
+// 『kozos.c』の『thread_kmalloc関数』『sendmsg』
 // 動的メモリの確保
 void *kzmem_alloc(int size)
 {

@@ -68,7 +68,7 @@ typedef struct _kz_msgbuf
 } kz_msgbuf;
 
 // メッセージボックス
-// メッセージIDごとに用意される
+// メッセージボックスの種類（ID）ごとに用意される
 typedef struct
 {
 	// 受信待ち状態のスレッド（ウェイクアップされるスレッド）
@@ -421,6 +421,32 @@ static int thread_kmfree(char *p)
 	kzmem_free(p);
 	putcurrent();
 	return 0;
+}
+
+// 引数として渡されたメッセージボックスに，メッセージを格納
+static void sendmsg(kz_msgbox *mboxp, kz_thread *thp, int size, char *p)
+{
+	kz_msgbuf *mp;
+
+	// メッセージバッファの作成
+	mp = (kz_msgbuf *)kzmem_alloc(sizeof(*mp));
+	if (mp == NULL)
+		kz_sysdown();
+	mp->next = NULL;
+	mp->sender = thp;
+	mp->param.size = size;
+	mp->param.p = p;
+
+	// メッセージボックスの末尾にメッセージを接続
+	if (mboxp->tail)
+	{
+		mboxp->tail->next = mp;
+	}
+	else
+	{
+		mboxp->head = mp;
+	}
+	mboxp->tail = mp;
 }
 
 // システムコールの実行 -------------------------------------------------------------------------------------------------
