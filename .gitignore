@@ -1,4 +1,5 @@
 .DS_Store
+.vscode
 
 # gcc-3.4.6, binutils-2.27, kz_h8write
 /tools
