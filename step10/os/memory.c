@@ -45,6 +45,8 @@ static kzmem_pool pool[] = {
 // メモリ・プールの種類の個数（今回は３種類）
 #define MEMORY_AREA_NUM (sizeof(pool) / sizeof(*pool))
 
+// どこから？
+// 『kzmem_init関数』
 // メモリプールの初期化
 static int kzmem_init_pool(kzmem_pool *p)
 {
@@ -100,6 +102,8 @@ static int kzmem_init_pool(kzmem_pool *p)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『kz_start関数』
 // 動的メモリの初期化
 int kzmem_init(void)
 {
@@ -112,6 +116,8 @@ int kzmem_init(void)
 	return 0;
 }
 
+// どこから？
+// 『kozos.c』の『thread_kmalloc関数』
 // 動的メモリの確保
 void *kzmem_alloc(int size)
 {
@@ -157,6 +163,8 @@ void *kzmem_alloc(int size)
 	return NULL;
 }
 
+// どこから？
+// 『kozos.c』の『thread_kmfree関数』
 // データ領域を指すメモリアドレスが渡される．汎用ポインタで受け取る．
 void kzmem_free(void *mem)
 {

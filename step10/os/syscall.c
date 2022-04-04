@@ -77,6 +77,8 @@ int kz_chpri(int priority)
 	return param.un.chpri.ret;
 }
 
+// どこから？
+// 『test10_1.c』の『test10_1_main関数』
 // メモリ領域の獲得用関数
 // 引数として必要なサイズを渡すと，そのサイズを格納できる大きさのメモリブロックを取得し，そのデータ領域のアドレスを返す
 void *kz_kmalloc(int size)
@@ -87,6 +89,8 @@ void *kz_kmalloc(int size)
 	return param.un.kmalloc.ret;
 }
 
+// どこから？
+// 『test10_1.c』の『test10_1_main関数』
 // メモリ領域の解放用関数
 // kz_kmallocによって獲得した領域のアドレスを渡すことで，その領域を解放する．解放した領域は対象ブロックが所属する解放済みリンクリストに接続され，再度獲得が行われたときに再利用される．
 int kz_kmfree(void *p)

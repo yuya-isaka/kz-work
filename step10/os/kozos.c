@@ -358,6 +358,8 @@ static int thread_chpri(int priority)
 	return old;
 }
 
+// どこから？
+// 『call_function関数』
 // 動的メモリ獲得
 static void *thread_kmalloc(int size)
 {
@@ -366,6 +368,8 @@ static void *thread_kmalloc(int size)
 	return kzmem_alloc(size);
 }
 
+// どこから？
+// 『call_function関数』
 // メモリ解放
 // charで受け取るんか．．
 static int thread_kmfree(char *p)

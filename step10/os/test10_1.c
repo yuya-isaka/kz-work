@@ -2,6 +2,8 @@
 #include "kozos.h"
 #include "lib.h"
 
+// どこから？
+// thread_init（init.func）
 int test10_1_main(int argc, char *argv[])
 {
 	char *p1, *p2;
