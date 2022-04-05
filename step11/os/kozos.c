@@ -423,6 +423,8 @@ static int thread_kmfree(char *p)
 	return 0;
 }
 
+// どこから？
+// 『thread_send関数』
 // 引数として渡されたメッセージボックスに，メッセージを格納
 static void sendmsg(kz_msgbox *mboxp, kz_thread *thp, int size, char *p)
 {
@@ -449,6 +451,8 @@ static void sendmsg(kz_msgbox *mboxp, kz_thread *thp, int size, char *p)
 	mboxp->tail = mp;
 }
 
+// どこから？
+// 『thread_recv関数』『thread_send関数』
 // メッセージの受信処理
 static void recvmsg(kz_msgbox *mboxp)
 {
@@ -462,7 +466,7 @@ static void recvmsg(kz_msgbox *mboxp)
 		mboxp->tail = NULL;
 	mp->next = NULL;
 
-	// kz_recv()の戻り値としてスレッドに返す値を設定する
+	// kz_recv()関数では，受信
 	p = mboxp->receiver->syscall.param;
 	p->un.recv.ret = (kz_thread_id_t)mp->sender;
 	if (p->un.recv.sizep)
@@ -485,6 +489,7 @@ static int thread_send(kz_msgbox_id_t id, int size, char *p)
 	// 送信対象のメッセージボックス
 	kz_msgbox *mboxp = &msgboxes[id];
 
+	// 送信システムコールを発行したスレッドは，もう用はないからレディーキューに戻す
 	putcurrent();
 	// メッセージを送信
 	sendmsg(mboxp, current, size, p);
@@ -501,6 +506,8 @@ static int thread_send(kz_msgbox_id_t id, int size, char *p)
 	return size;
 }
 
+// どこから？
+// 『call_function関数』から
 // システムコールの処理（kz_recv())
 static kz_thread_id_t thread_recv(kz_msgbox_id_t id, int *sizep, char **pp)
 {
@@ -508,7 +515,7 @@ static kz_thread_id_t thread_recv(kz_msgbox_id_t id, int *sizep, char **pp)
 	kz_msgbox *mboxp = &msgboxes[id];
 
 	// 他のスレッドが既に受信待ちしている
-	// -> 受信待ちしているメッセージボックスは利用しないってこと？？？
+	// -> 受信待ちしているメッセージボックスにさらに受信待ちを指示することはできない．それは設計が間違っている．
 	if (mboxp->receiver)
 		kz_sysdown();
 
@@ -698,7 +705,6 @@ void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc,
 
 	// メッセージボックスの初期化
 	memset(msgboxes, 0, sizeof(msgboxes));
-	// メッセージボックスはメッセージを格納するボックスのこと（１つのメッセージにつき１つのボックスしか使えない，複数のメッセージを格納することは不可）
 
 	// 割込みハンドラの登録
 	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録

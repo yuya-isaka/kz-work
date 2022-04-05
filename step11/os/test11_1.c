@@ -2,6 +2,8 @@
 #include "kozos.h"
 #include "lib.h"
 
+// どこから？
+// 『kozos.c』の『thread_init関数』のinit.func()
 int test11_1_main(int argc, char *argv[])
 {
 	char *p;
