@@ -104,6 +104,8 @@ int kz_kmfree(void *p)
 	return param.un.kmfree.ret;
 }
 
+// どこから？
+// 『test11_1.c』『test11_2.c』
 int kz_send(kz_msgbox_id_t msg_id, int size, char *p)
 {
 	kz_syscall_param_t param;
@@ -114,6 +116,8 @@ int kz_send(kz_msgbox_id_t msg_id, int size, char *p)
 	return param.un.recv.ret;
 }
 
+// どこから？
+// 『test11_1.c』『test11_2.c』
 kz_thread_id_t kz_recv(kz_msgbox_id_t msg_id, int *sizep, char **pp)
 {
 	kz_syscall_param_t param;
