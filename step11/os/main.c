@@ -7,7 +7,6 @@
 // kz_thread_id_t test09_2_id;
 // kz_thread_id_t test09_3_id;
 
-
 // どこから？
 // 『kozos.c』の『thread_init関数』（init.func）
 // スレッドとして生成されて実行される関数は，すべて『thread_init関数』（init.func）
@@ -21,7 +20,9 @@ static int start_threads(int argc, char *argv[])
 	// test09_1_id = kz_run(test09_1_main, "test09_1", 1, 0x100, 0, NULL);
 	// test09_2_id = kz_run(test09_2_main, "test09_2", 2, 0x100, 0, NULL);
 	// test09_3_id = kz_run(test09_3_main, "test09_3", 3, 0x100, 0, NULL);
-	kz_run(test10_1_main, "test10_1", 1, 0x100, 0, NULL);
+	// kz_run(test10_1_main, "test10_1", 1, 0x100, 0, NULL);
+	kz_run(test11_1_main, "test11_1", 1, 0x100, 0, NULL);
+	kz_run(test11_2_main, "test11_2", 2, 0x100, 0, NULL);
 
 	// start_threadsスレッドの優先順位を下げて，アイドルスレッドに移行する（優先順位を最低にする）
 	kz_chpri(15);

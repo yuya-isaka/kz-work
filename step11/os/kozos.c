@@ -449,6 +449,85 @@ static void sendmsg(kz_msgbox *mboxp, kz_thread *thp, int size, char *p)
 	mboxp->tail = mp;
 }
 
+// メッセージの受信処理
+static void recvmsg(kz_msgbox *mboxp)
+{
+	kz_msgbuf *mp;
+	kz_syscall_param_t *p;
+
+	// メッセージボックスのキューから，メッセージを取得する
+	mp = mboxp->head;
+	mboxp->head = mp->next;
+	if (mboxp->head == NULL)
+		mboxp->tail = NULL;
+	mp->next = NULL;
+
+	// kz_recv()の戻り値としてスレッドに返す値を設定する
+	p = mboxp->receiver->syscall.param;
+	p->un.recv.ret = (kz_thread_id_t)mp->sender;
+	if (p->un.recv.sizep)
+		*(p->un.recv.sizep) = mp->param.size;
+	if (p->un.recv.pp)
+		*(p->un.recv.pp) = mp->param.p;
+
+	// 受信待ちスレッドはいなくなったので，NULLに戻す
+	mboxp->receiver = NULL;
+
+	// メッセージバッファの解放
+	kzmem_free(mp);
+}
+
+// どこから？
+// 『call_function関数』から
+// システムコールの処理（kz_send())
+static int thread_send(kz_msgbox_id_t id, int size, char *p)
+{
+	// 送信対象のメッセージボックス
+	kz_msgbox *mboxp = &msgboxes[id];
+
+	putcurrent();
+	// メッセージを送信
+	sendmsg(mboxp, current, size, p);
+
+	// 送信対象のメッセージボックスで，受信待ちしているスレッドがいる場合，そちらを優先して受信処理を行う
+	if (mboxp->receiver)
+	{
+		current = mboxp->receiver;
+		recvmsg(mboxp);
+		// 受信待ちしているスレッドの処理を再開させるために，レディーキューにつなぎ直す
+		putcurrent();
+	}
+
+	return size;
+}
+
+// システムコールの処理（kz_recv())
+static kz_thread_id_t thread_recv(kz_msgbox_id_t id, int *sizep, char **pp)
+{
+	// 受信対象のメッセージボックス
+	kz_msgbox *mboxp = &msgboxes[id];
+
+	// 他のスレッドが既に受信待ちしている
+	// -> 受信待ちしているメッセージボックスは利用しないってこと？？？
+	if (mboxp->receiver)
+		kz_sysdown();
+
+	mboxp->receiver = current;
+
+	if (mboxp->head == NULL)
+	{
+		// メッセージボックスにメッセージがない場合，スレッドをスリープさせる．
+		// （受信待ち状態になる）
+		return -1;
+	}
+
+	recvmsg(mboxp);
+	// 受信処理が完了したら，レディーキューにつなぎ直す（ウェイクアップしてレディー状態に戻す）
+	putcurrent();
+
+	return current->syscall.param->un.recv.ret;
+}
+
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
 // どこから？
@@ -485,6 +564,12 @@ static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 		break;
 	case KZ_SYSCALL_TYPE_KMFREE: // kz_kmree
 		p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
+		break;
+	case KZ_SYSCALL_TYPE_SEND: // kz_send
+		p->un.send.ret = thread_send(p->un.send.id, p->un.send.size, p->un.send.p);
+		break;
+	case KZ_SYSCALL_TYPE_RECV: // kz_recv
+		p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
 		break;
 	default:
 		break;
@@ -610,6 +695,10 @@ void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc,
 	memset(handlers, 0, sizeof(handlers));
 	// 割込みハンドラは誤動作防止のためすべて０で初期化
 	// syscall_intrとsofterr_intrを登録する
+
+	// メッセージボックスの初期化
+	memset(msgboxes, 0, sizeof(msgboxes));
+	// メッセージボックスはメッセージを格納するボックスのこと（１つのメッセージにつき１つのボックスしか使えない，複数のメッセージを格納することは不可）
 
 	// 割込みハンドラの登録
 	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録
