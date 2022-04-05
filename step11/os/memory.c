@@ -179,7 +179,7 @@ void kzmem_free(void *mem)
 	for (i = 0; i < MEMORY_AREA_NUM; i++)
 	{
 		p = &pool[i];
-		// どのプールか調べる
+		// どのプール(どのサイズ)か調べる
 		if (mp->size == p->size)
 		{
 			// 解放済みリンクリストの先頭につなげる（再利用可能になる）
