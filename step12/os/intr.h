@@ -1,5 +1,8 @@
 // 割り込み種別の定義
 
+// なんでこの定義はdefines.hに書いていないのか？
+// 何処かに書いてたような．．
+
 #ifndef _INTR_H_INCLUDED_
 #define _INTR_H_INCLUDED_
 
