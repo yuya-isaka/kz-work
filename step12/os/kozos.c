@@ -537,51 +537,154 @@ static kz_thread_id_t thread_recv(kz_msgbox_id_t id, int *sizep, char **pp)
 
 // システムコールの実行 -------------------------------------------------------------------------------------------------
 
-// どこから？
-// 『kozos.c』の『syscall_proc関数』
-// システムコールの種別に応じた処理が行われる．
-// -> thread_? が呼ばれる
+// kz_run()
+void call_run(kz_syscall_param_t *p)
+{
+	p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.priority, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
+}
+
+// kz_exit()
+void call_exit(kz_syscall_param_t *p)
+{
+	// TCB（スレッド）が消去されるので戻り値を書き込んではいけない
+	thread_exit();
+}
+
+// kz_wait()
+void call_wait(kz_syscall_param_t *p)
+{
+	p->un.wait.ret = thread_wait();
+}
+
+// kz_sleep()
+void call_sleep(kz_syscall_param_t *p)
+{
+	p->un.sleep.ret = thread_sleep();
+}
+
+// kz_wakeup()
+void call_wakeup(kz_syscall_param_t *p)
+{
+	p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
+}
+
+// kz_getid()
+void call_getid(kz_syscall_param_t *p)
+{
+	p->un.getid.ret = thread_getid();
+}
+
+// kz_chpri()
+void call_chpri(kz_syscall_param_t *p)
+{
+	p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
+}
+
+// kz_kmalloc()
+void call_kmalloc(kz_syscall_param_t *p)
+{
+	p->un.kmalloc.ret = thread_kmalloc(p->un.kmalloc.size);
+}
+
+// kz_kmfree()
+void call_kmfree(kz_syscall_param_t *p)
+{
+	p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
+}
+
+// kz_send()
+void call_send(kz_syscall_param_t *p)
+{
+	p->un.send.ret = thread_send(p->un.send.id, p->un.send.size, p->un.send.p);
+}
+
+// kz_recv()
+void call_recv(kz_syscall_param_t *p)
+{
+	p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
+}
+
+// kz_setintr()
+void call_setintr(kz_syscall_param_t *p)
+{
+	p->un.send.ret = thread_setintr(p->un.setintr.type, p->un.setintr.handler);
+}
+
+// 『システム・コール・テーブル』と呼ぶらしい
+void (*functions[])(kz_syscall_param_t *p) = {
+	call_run,
+	call_exit,
+	call_wait,
+	call_sleep,
+	call_wakeup,
+	call_getid,
+	call_chpri,
+	call_kmalloc,
+	call_kmfree,
+	call_send,
+	call_recv,
+	call_setintr};
+
+// 関数のポインタの配列を利用して，(明示的に)テーブル参照することで，リアルタイム性を確保
 static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 {
-	switch (sys_type)
-	{
-	case KZ_SYSCALL_TYPE_RUN: // kz_run
-		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.priority, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
-		break;
-	case KZ_SYSCALL_TYPE_EXIT: // kz_exit
-		thread_exit();
-		break;
-	case KZ_SYSCALL_TYPE_WAIT: // kz_wait
-		p->un.wait.ret = thread_wait();
-		break;
-	case KZ_SYSCALL_TYPE_SLEEP: // kz_sleep
-		p->un.sleep.ret = thread_sleep();
-		break;
-	case KZ_SYSCALL_TYPE_WAKEUP: // kz_wakeup
-		p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
-		break;
-	case KZ_SYSCALL_TYPE_GETID: // kz_getid
-		p->un.getid.ret = thread_getid();
-		break;
-	case KZ_SYSCALL_TYPE_CHPRI: // kz_chpri
-		p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
-		break;
-	case KZ_SYSCALL_TYPE_KMALLOC: // kz_kmalloc
-		p->un.kmalloc.ret = thread_kmalloc(p->un.kmalloc.size);
-		break;
-	case KZ_SYSCALL_TYPE_KMFREE: // kz_kmree
-		p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
-		break;
-	case KZ_SYSCALL_TYPE_SEND: // kz_send
-		p->un.send.ret = thread_send(p->un.send.id, p->un.send.size, p->un.send.p);
-		break;
-	case KZ_SYSCALL_TYPE_RECV: // kz_recv
-		p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
-		break;
-	default:
-		break;
-	}
+	functions[sys_type](p);
 }
+
+// ↑
+// |
+// |   関数へのポインタの配列からハンドラを取得して呼び出したバージョン
+// |
+// |
+
+// どこから？
+// 『kozos.c』の『syscall_proc関数』
+// システムコール番号に応じて実際の処理（thread_???）を呼び出す
+// -> thread_? が呼ばれる
+// static void call_function(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
+// {
+// 	switch (sys_type)
+// 	{
+// 	case KZ_SYSCALL_TYPE_RUN: // kz_run
+// 		p->un.run.ret = thread_run(p->un.run.func, p->un.run.name, p->un.run.priority, p->un.run.stacksize, p->un.run.argc, p->un.run.argv);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_EXIT: // kz_exit
+// 		thread_exit();
+// 		break;
+// 	case KZ_SYSCALL_TYPE_WAIT: // kz_wait
+// 		p->un.wait.ret = thread_wait();
+// 		break;
+// 	case KZ_SYSCALL_TYPE_SLEEP: // kz_sleep
+// 		p->un.sleep.ret = thread_sleep();
+// 		break;
+// 	case KZ_SYSCALL_TYPE_WAKEUP: // kz_wakeup
+// 		p->un.wakeup.ret = thread_wakeup(p->un.wakeup.id);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_GETID: // kz_getid
+// 		p->un.getid.ret = thread_getid();
+// 		break;
+// 	case KZ_SYSCALL_TYPE_CHPRI: // kz_chpri
+// 		p->un.chpri.ret = thread_chpri(p->un.chpri.priority);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_KMALLOC: // kz_kmalloc
+// 		p->un.kmalloc.ret = thread_kmalloc(p->un.kmalloc.size);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_KMFREE: // kz_kmree
+// 		p->un.kmfree.ret = thread_kmfree(p->un.kmfree.p);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_SEND: // kz_send
+// 		p->un.send.ret = thread_send(p->un.send.id, p->un.send.size, p->un.send.p);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_RECV: // kz_recv
+// 		p->un.recv.ret = thread_recv(p->un.recv.id, p->un.recv.sizep, p->un.recv.pp);
+// 		break;
+// 	case KZ_SYSCALL_TYPE_SETINTR: // kz_setintr
+// 		p->un.send.ret = thread_setintr(p->un.setintr.type, p->un.setintr.handler);
+// 		break;
+// 	default:
+// 		break;
+// 	}
+// }
 
 // どこから？
 // 『kozos.c』の『syscall_intr関数』
@@ -598,6 +701,21 @@ static void syscall_proc(kz_syscall_type_t sys_type, kz_syscall_param_t *p)
 static void syscall_intr(void)
 {
 	syscall_proc(current->syscall.type, current->syscall.param);
+}
+
+// サービス・コール
+static void srvcall_proc(kz_syscall_type_t type, kz_syscall_param_t *p)
+{
+	/*
+		システムコールとサービスコールの処理関数の内部で，
+		システムコールの実行したスレッドIDを得るために current を参照している部分があり　（『thread_send()』）
+		current が残っていると後動作するため， NULL に設定する．
+
+		サービスコールは，thread_intr()の割り込みハンドラ呼び出し延長で呼ばれているはずなので，
+		呼び出し後に， thread_intr()でスケジューリング処理が行われ， current は再設定される．
+	*/
+	current = NULL;
+	call_functions(type, p);
 }
 
 // どこから？
@@ -641,7 +759,9 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp)
 	// カレントスレッドのコンテキストを保存
 	current->context.sp = sp;
 
+	// 割り込みごと（sof_typeに従って）ハンドラを実行
 	// syscall_intr, softerr_intr （システムコール，ソフトウェアエラー）
+	// それ以外の場合は，『kz_setintrによってユーザ登録されたハンドラ』が実行される．
 	if (handlers[sof_type])
 		handlers[sof_type]();
 
@@ -662,15 +782,19 @@ static void thread_intr(softvec_type_t sof_type, unsigned long sp);
 // ↓ 現状は１つだが増えるかも？
 // SOFTVECS配列...thread_intr
 // handlers配列...syscall_intr, softerr_intr (システムコール or ソフトウェアエラー)
-static int setintr(softvec_type_t sof_type, kz_handler_t handler)
+static int thread_setintr(softvec_type_t sof_type, kz_handler_t handler)
 {
 
 	softvec_setintr(sof_type, thread_intr); // ソフトウェア割込みベクタにthread_intr設定
 
 	handlers[sof_type] = handler; // ハンドラーに登録
 
+	// 処理後にレディーキューにつなぎ直す
+	putcurrent();
+
 	return 0;
 }
+// 元々はカーネル内部から呼び出すサービス関数だったが，システムコールとしてユーザ側からも利用できるようにした
 
 // 初期スレッドの起動 -------------------------------------------------------------------------------------------------------
 
@@ -707,10 +831,11 @@ void kz_start(kz_func_t func, char *name, int priority, int stacksize, int argc,
 	memset(msgboxes, 0, sizeof(msgboxes));
 
 	// 割込みハンドラの登録
-	setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録
-	setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // システムコール, 『syscall_intr』関数が呼ばれるように登録
+	thread_setintr(SOFTVEC_TYPE_SOFTERR, softerr_intr); // ダウン要因発生, 『softerr_intr』関数が呼ばれるように登録
+	thread_setintr(SOFTVEC_TYPE_SYSCALL, syscall_intr); // システムコール, 『syscall_intr』関数が呼ばれるように登録
 	// -> 登録した割込みハンドラは直接呼ばれない．割込み要因がシステムコールであろうがダウン要因発生だろうが，必ず『thread_intr関数』が呼ばれる．
 	//    thread_intr関数の中で，『syscall_intr関数』『softerr_intr関数』が呼び分けられる
+	// 中でputcurrentが呼ばれるが，カレントスレッドはNULLに設定されているので，問題ない
 
 	// 初期スレッドの新規作成
 	current = (kz_thread *)thread_run(func, name, priority, stacksize, argc, argv);
@@ -778,4 +903,11 @@ void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param)
 					- CCR
 				- スレッドの処理を再開する．
 	*/
+}
+
+// サービスコール呼び出し用の関数
+// サービスコールは単なる関数呼び出しだけ（ユーザスレッドから呼び出される（ユーザタスクで動作する）から）
+void kz_srvcall(kz_syscall_type_t type, kz_syscall_param_t *param)
+{
+	srvcall_proc(type, param);
 }
