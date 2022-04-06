@@ -39,6 +39,14 @@ int kz_kmfree(void *p);
 int kz_send(kz_msgbox_id_t msg_id, int size, char *p);
 // メッセージ受信
 kz_thread_id_t kz_recv(kz_msgbox_id_t msg_id, int *sizep, char **pp);
+// 割り込み
+int kz_setintr(softvec_type_t type, kz_handler_t handler);
+
+// サービスコール
+int kx_wakeup(kz_thread_id_t id);
+void *kx_kmalloc(int size);
+int kx_kmfree(void *p);
+int kx_send(kz_msgbox_id_t id, int size, char *p);
 
 // 初期スレッドを起動し，OSの動作を開始
 /*
@@ -64,7 +72,19 @@ void kz_sysdown(void);
 */
 void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 
-// ユーザスレッド
+// サービスコール用の共通関数
+void kz_srvcall(kz_syscall_type_t type, kz_syscall_param_t *param);
+
+// -----------------スレッド-----------------------
+
+// システムタスク-------
+
+// コンソールドライバスレッド
+int consdrv_main(int arvc, char *argv[]);
+
+//-------------------
+
+// ユーザタスク--------
 /*
 	ユーザスレッドのメイン関数
 	C言語のmainに相当
@@ -78,7 +98,11 @@ void kz_syscall(kz_syscall_type_t sys_type, kz_syscall_param_t *param);
 // extern kz_thread_id_t test09_2_id;
 // extern kz_thread_id_t test09_3_id;
 // int test10_1_main(int argc, char *argv[]);
-int test11_1_main(int argc, char *argv[]);
-int test11_2_main(int argc, char *argv[]);
+// int test11_1_main(int argc, char *argv[]);
+// int test11_2_main(int argc, char *argv[]);
+
+int command_main(int argc, char *argv[]);
+
+//-------------------
 
 #endif

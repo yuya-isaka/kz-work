@@ -89,7 +89,9 @@ typedef struct
 		struct
 		{
 			/*
-				ソフトウェア割り込みの種類
+				- ソフトウェア割り込みの種類 (0, 1, 2)
+				- intr.Sに記述された割り込みハンドラ (syscall_intr, softerr_intr)
+				- 返り値
 			*/
 			softvec_type_t type;
 			kz_handler_t handler;
