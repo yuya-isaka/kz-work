@@ -206,7 +206,7 @@ int serial_intr_is_send_enable(int index)
 	return (sci->scr & H8_3069F_SCI_SCR_TIE ? 1 : 0); // SCRのTIEビットを返す
 }
 
-// 送信割込み有効か
+// 送信割込み有効化
 void serial_intr_send_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;

@@ -2,6 +2,8 @@
 
 // なんでこの定義はdefines.hに書いていないのか？
 // 何処かに書いてたような．．
+// intr.Sで参照したい値は，typedefが分からない？んやったかん
+// アセンブラがギリわかるやつじゃないとダメ
 
 #ifndef _INTR_H_INCLUDED_
 #define _INTR_H_INCLUDED_
