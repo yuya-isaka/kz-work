@@ -1,3 +1,5 @@
+// コンソールデバイスドライバの開発
+
 /*
 	- NULL
 	- SERIAL_DEFAULT_DEVICE
