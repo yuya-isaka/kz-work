@@ -143,6 +143,7 @@ static int consdrv_intrproc(struct consreg *cons)
 			{
 				// Enterが押されたら、バッファの内容をコマンド処理スレッドに通知する（割込みハンドラ上での処理なので、サービスコールを利用する）
 				// 必要なメモリを獲得
+				// ここで獲得されたメモリを解放するのはコマンドスレッドで、command.c内で解放される
 				p = kx_kmalloc(CONS_BUFFER_SIZE);
 				// 獲得したメモリに受信バッファの内容をコピー
 				memcpy(p, cons->recv_buf, cons->recv_len);
@@ -171,7 +172,6 @@ static int consdrv_intrproc(struct consreg *cons)
 			// 他の処理がないならアイドルスレッドが動作して省電力モードに入ることができる
 			// CPU時間を無駄にしない
 		}
-
 	}
 	// ここで注意なのが、send_string()とconsdrv_intrproc()の二箇所からsend_char()が呼ばれ両方から送信バッファが操作されていること
 	// send_string()はコンソールドライバスレッドが呼び出すが、consdrv_intrproc()は割り込みハンドラから呼ばれる
@@ -213,3 +213,76 @@ static void consdrv_intr(void)
 		}
 	}
 }
+
+// コンソール制御用の構造体の配列（consreg[]）の初期化
+static int consdrv_init(void)
+{
+	memset(consreg, 0, sizeof(consreg));
+	return 0;
+}
+
+// 他スレッドからのコマンドを処理する
+static int consdrv_command(struct consreg *cons, kz_thread_id_t id, int index, int size, char *command)
+{
+	switch (command[0])
+	{
+	// コンソールドライバの使用開始
+	case CONSDRV_CMD_USE:
+		cons->id = id;
+		cons->index = command[1] - '0';
+		// 送信バッファ獲得
+		cons->send_buf = kz_kmalloc(CONS_BUFFER_SIZE);
+		// 受信バッファ獲得
+		cons->recv_buf = kz_kmalloc(CONS_BUFFER_SIZE);
+		cons->send_len = 0;
+		cons->recv_len = 0;
+		// シリアルの初期化
+		serial_init(cons->index);
+		// シリアル受信割り込みを有効にする
+		serial_intr_recv_enable(cons->index);
+		break;
+	// コンソールへの文字列出力
+	case CONSDRV_CMD_WRITE:
+		/*
+			send_string()では送信バッファを操作しており再入不可なので、
+			排他のために割り込み禁止にして呼び出す
+		*/
+		// 『送信バッファの排他』を保障
+		INTR_DISABLE;
+		send_string(cons, command + 1, size - 1);
+		INTR_ENABLE;
+		break;
+	default:
+		break;
+	}
+
+	return 0;
+}
+
+// コンソールドライバスレッドのメイン関数
+int consdrv_main(int argc, char *argv[])
+{
+	int size, index;
+	kz_thread_id_t id;
+	char *p;
+
+	consdrv_init();
+	// 割り込みハンドラを登録
+	// これにより知り合う送信・受信割込みの発生時には、割込みハンドラとしてconsdrv_intr()が呼ばれる
+	kz_setintr(SOFTVEC_TYPE_SERINTR, consdrv_intr);
+
+	while (1)
+	{
+		// 他スレッドからのコマンドの受付
+		id = kz_recv(MSGBOX_ID_CONSOUTPUT, &size, &p);
+		index = p[0] - '0';
+		// コマンド処理を呼び出す
+		consdrv_command(&consreg[index], id, index, size - 1, p + 1);
+		kz_kmfree(p);
+	}
+
+	return 0;
+}
+
+// 送信割り込みのハンドラでは送信処理は行わずにコンソールドライバスレッドに送信完了の通知をメッセージで送信し
+// コンソールドライバスレッド側で次の文字の送信を行うようにすることで、割り込み禁止にする必要性をなくすことができる。
