@@ -105,15 +105,27 @@ static void send_string(struct consreg *cons, char *str, int len)
 	}
 }
 
+/*
+	以下は割込みハンドラから呼ばれる割込み処理
+	つまり、非同期で呼ばれるからライブラリ関数を使うときは注意
+	基本的に以下のいずれかに当てはまる関数しか呼び出してはいけない
+	・再入可能
+	・スレッドから呼ばれることはない関数
+	・スレッドから呼ばれることがあるが、割込み禁止で呼び出している
+	また非コンテキスト状態で呼ばれるため、システムコールは利用してはいけない
+	（代わりにサービスコールを利用すること）
+*/
 static int consdrv_intrproc(struct consreg *cons)
 {
 	unsigned char c;
 	char *p;
 
+	// 受信割込みの処理
 	if (serial_is_recv_enable(cons->index))
 	{
 		// 受け取る
 		c = serial_recv_byte(cons->index);
+		// 改行コード変換
 		if (c == '\r')
 			c = '\n';
 
@@ -124,19 +136,25 @@ static int consdrv_intrproc(struct consreg *cons)
 		{
 			if (c != '\n')
 			{
-				// 受信バッファに保存
+				// 改行でないなら受信バッファにバッファリング（保存）
 				cons->recv_buf[cons->recv_len++] = c;
 			}
 			else
 			{
+				// Enterが押されたら、バッファの内容をコマンド処理スレッドに通知する（割込みハンドラ上での処理なので、サービスコールを利用する）
+				// 必要なメモリを獲得
 				p = kx_kmalloc(CONS_BUFFER_SIZE);
+				// 獲得したメモリに受信バッファの内容をコピー
 				memcpy(p, cons->recv_buf, cons->recv_len);
+				// 割込みハンドラ->スレッド　メッセージを送信
+				// MSGBOX_ID_CONSINPUTのメッセージボックスに送信（割込みの延長で処理が行われる）
 				kx_send(MSGBOX_ID_CONSINPUT, cons->recv_len, p);
 				cons->recv_len = 0;
 			}
 		}
 	}
 
+	// 送信割込みの処理
 	if (serial_is_send_enable(cons->index))
 	{
 		if (!cons->id || !cons->send_len)
@@ -145,13 +163,39 @@ static int consdrv_intrproc(struct consreg *cons)
 		}
 		else
 		{
+			// 送信割込みが発生している場合は、送信バッファに蓄えられているデータの先頭一文字をsend_char()によって出力
+			// 文字列の送信は、まず、send_string()によって最初の一文字が送信され、残りは送信完了割込みが発生するたびに、この割込みハンドラから送信される
+			// ↓ 先頭の一文字以降の残りの文字列を順番に送信している
 			send_char(cons);
+			// puts()による送信では送信の完了をビジーループによって待つため無駄があったが、割り込みをベースにした実装にすることで、前の文字の送信が終わるのを割り込みによって待つため、他の処理が動作することができる
+			// 他の処理がないならアイドルスレッドが動作して省電力モードに入ることができる
+			// CPU時間を無駄にしない
 		}
+
 	}
+	// ここで注意なのが、send_string()とconsdrv_intrproc()の二箇所からsend_char()が呼ばれ両方から送信バッファが操作されていること
+	// send_string()はコンソールドライバスレッドが呼び出すが、consdrv_intrproc()は割り込みハンドラから呼ばれる
+
+	// じゃあスレッドがコンソール主流直の要求を受けて、send_string()を呼び出し、send_char()が呼ばれている最中に以前に送信していた文字の送信が完了して送信割込みが入り
+	// 後続の文字を出力するためにsend_char()が呼ばれてしまった時を考えてみよう。
+
+	// この場合、send_char()に対して、11thの「関数の再入と排他』で説明した『関数の再入』が行われてしまう
+	// send_char()の内部では送信バッファを操作している。しかし送信バッファの操作中に送信割込みによってsend_char()が再入された場合、さらに送信バッファが上書きされてしまい、誤動作する可能性がある
+	// このため送信バッファに対して『排他』の考慮をする必要がある。
+
+	// 『排他』には11thで説明したさまざまな方法があるが、ここでは最も簡単な割込み禁止で回避
+	/*
+	・割込み禁止
+		・OS内部で操作（割込み禁止）
+	・セマフォ
+	・そもそも再入が入らない設計
+	・スレッド化
+	*/
 
 	return 0;
 }
 
+// シリアルの割込みハンドラ
 static void consdrv_intr(void)
 {
 	int i;
@@ -162,10 +206,10 @@ static void consdrv_intr(void)
 		cons = &consreg[i];
 		if (cons->id)
 		{
+			// シリアルの送信・受信割込みの状態をチェック
 			if (serial_is_send_enable(cons->index) || serial_is_recv_enable(cons->index))
+				// 割り込みが発生しているのならconsdrv_intrprocを呼び出す
 				consdrv_intrproc(cons);
 		}
 	}
 }
-
-
