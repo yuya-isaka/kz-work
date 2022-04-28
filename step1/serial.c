@@ -4,6 +4,8 @@
 #define SERIAL_SCI_NUM 3 // SCIの数
 
 // SCIの定義
+// 既に構造体の中でvolatileしているから、ここのvolatileはいらない
+// 本当かな？　実験してみる価値はあり
 #define H8_3069F_SCI0 ((volatile struct h8_3069f_sci *)0xffffb0)
 #define H8_3069F_SCI1 ((volatile struct h8_3069f_sci *)0xffffb8)
 #define H8_3069F_SCI2 ((volatile struct h8_3069f_sci *)0xffffc0)
@@ -21,16 +23,16 @@ struct h8_3069f_sci
 };
 
 // SMRの各ビットの定義
-#define H8_3069F_SCI_SMR_CKS_PER1 (0 << 0)	// クロックセット（クロックをそのまま利用）
-#define H8_3069F_SCI_SMR_CKS_PER4 (1 << 0)	// クロックセット
-#define H8_3069F_SCI_SMR_CKS_PER16 (2 << 0) // クロックセット
-#define H8_3069F_SCI_SMR_CKS_PER64 (3 << 0) // クロックセット
-#define H8_3069F_SCI_SMR_MP (1 << 2)		//
-#define H8_3069F_SCI_SMR_STOP (1 << 3)		// ストップビット長が１か2
-#define H8_3069F_SCI_SMR_OE (1 << 4)		// 偶数パリティか奇数パリティか
-#define H8_3069F_SCI_SMR_PE (1 << 5)		// パリティ無効か有効
-#define H8_3069F_SCI_SMR_CHR (1 << 6)		// データ長が8か7
-#define H8_3069F_SCI_SMR_CA (1 << 7)		// 調歩動機式モードかクロック同期式モード
+#define H8_3069F_SCI_SMR_CKS_PER1 (0 << 0)	// 00000000 クロックセット（クロックをそのまま利用）
+#define H8_3069F_SCI_SMR_CKS_PER4 (1 << 0)	// 00000001 クロックセット
+#define H8_3069F_SCI_SMR_CKS_PER16 (2 << 0) // 00000010 クロックセット
+#define H8_3069F_SCI_SMR_CKS_PER64 (3 << 0) // 00000011 クロックセット
+#define H8_3069F_SCI_SMR_MP (1 << 2)		// 00000100
+#define H8_3069F_SCI_SMR_STOP (1 << 3)		// 00001000 ストップビット長が１か2
+#define H8_3069F_SCI_SMR_OE (1 << 4)		// 00010000 偶数パリティか奇数パリティか
+#define H8_3069F_SCI_SMR_PE (1 << 5)		// 00100000 パリティ無効か有効
+#define H8_3069F_SCI_SMR_CHR (1 << 6)		// 01000000 データ長が8か7
+#define H8_3069F_SCI_SMR_CA (1 << 7)		// 10000000 調歩動機式モードかクロック同期式モード
 
 // SCRの各ビットの定義
 #define H8_3069F_SCI_SCR_CKE0 (1 << 0) // クロックイネーブル
