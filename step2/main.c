@@ -16,6 +16,15 @@ int main(void)
 	puts("\n");
 	putxval(0xffff, 0);
 	puts("\n");
+	putxval(3, 0);
+	puts("\n");
+	putxval(100, 0);
+	puts("\n");
+	putxval('a', 0);
+	puts("\n");
+	putxval('bc', 2);
+	puts("\n");
+	putxval('bc', 0);
 	puts("\n");
 
 	while (1)
