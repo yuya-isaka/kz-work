@@ -118,6 +118,8 @@ static struct
 	{H8_3069F_SCI2}, // SCI2の先頭アドレス
 };
 
+// ------------------------------------------------------------------初期化関連-----------------------------------------------------------------------------------
+
 // デバイス初期化
 int serial_init(int index)
 {
@@ -135,7 +137,9 @@ int serial_init(int index)
 	return 0;
 }
 
-// 受信準備OK?
+// ------------------------------------------------------------------送信関連-----------------------------------------------------------------------------------
+
+// 送信していい?
 int serial_is_send_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
@@ -181,7 +185,9 @@ int serial_send_byte(int index, unsigned char c)
 	return 0;
 }
 
-// 送信された？
+// ------------------------------------------------------------------受信関連-----------------------------------------------------------------------------------
+
+// 送信された？受信できる？
 int serial_is_recv_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
@@ -209,7 +215,9 @@ unsigned char serial_recv_byte(int index)
 	return c;
 }
 
-// 送信割込み有効か？
+// ------------------------------------------------------------------送信割込み関連-----------------------------------------------------------------------------------
+
+// 送信割込み有効？
 int serial_intr_is_send_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
@@ -233,7 +241,9 @@ void serial_intr_send_disable(int index)
 	sci->scr &= ~H8_3069F_SCI_SCR_TIE; // SCRのTIEビットを落とす
 }
 
-// 受信割込み有効か？
+// ------------------------------------------------------------------受信割込み関連-----------------------------------------------------------------------------------
+
+// 受信割込み有効？
 int serial_intr_is_recv_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;
@@ -241,7 +251,7 @@ int serial_intr_is_recv_enable(int index)
 	return (sci->scr & H8_3069F_SCI_SCR_RIE ? 1 : 0); // SCRのRIEビットを返す
 }
 
-// 受信割込み有効か
+// 受信割込み有効化
 void serial_intr_recv_enable(int index)
 {
 	volatile struct h8_3069f_sci *sci = regs[index].sci;

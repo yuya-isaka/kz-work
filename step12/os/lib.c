@@ -179,6 +179,7 @@ int gets(unsigned char *buf)
 		c = getc();
 		// 改行コードは削る
 		if (c == '\n')
+			// ここに入ったてことは次のループ判定で終了
 			c = '\0';
 		buf[i++] = c;
 	} while (c); // 改行きたら終了
