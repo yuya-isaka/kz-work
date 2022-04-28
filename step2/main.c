@@ -22,9 +22,9 @@ int main(void)
 	puts("\n");
 	putxval('a', 0);
 	puts("\n");
-	putxval("bc", 2);
+	putxval('a', 2);
 	puts("\n");
-	putxval("bc", 0);
+	putxval('b', 0);
 	puts("\n");
 
 	while (1)
