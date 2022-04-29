@@ -103,7 +103,7 @@ typedef struct _sci
 	volatile registers *s;
 } sci;
 
-static volatile sci regs[SERIAL_SCI_NUM] = {
+static volatile registers *regs[SERIAL_SCI_NUM] = {
 	{SCI0},
 	{SCI1},
 	{SCI2},
@@ -132,7 +132,7 @@ static volatile sci regs[SERIAL_SCI_NUM] = {
 // デバイス初期化
 int serial_init(int index)
 {
-	volatile registers *s = regs[index].s;
+	volatile registers *s = regs[index];
 
 	// 1. シリアル送受信と割り込みを全て無効化
 	s->scr = 0;
@@ -149,7 +149,7 @@ int serial_init(int index)
 // 送信可能か？
 int serial_is_send_enable(int index)
 {
-	volatile registers *s = regs[index].s;
+	volatile registers *s = regs[index];
 	// SSRの送信完了ビットを監視
 	return (s->ssr & H8_3069F_SCI_SSR_TDRE);
 }
@@ -165,7 +165,7 @@ int serial_is_send_enable(int index)
 // シリアルへの文字出力関数(端末変換を行わない)
 int serial_send_byte(int index, unsigned char c)
 {
-	volatile registers *s = regs[index].s;
+	volatile registers *s = regs[index];
 
 	// 1. 送信可能になるまで待つ(ビジーループ)
 	while (!serial_is_send_enable(index))
