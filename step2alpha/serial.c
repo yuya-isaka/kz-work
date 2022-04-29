@@ -41,9 +41,9 @@
 // SCIの定義
 // 先頭アドレス
 // 構造体でキャスト，　0xffffb0というアドレスをh8_3069f_sciという構造体でキャスト -> メモリマップドIOで周辺コントローラのアドレス経由でアクセスするとき，　アドレスを構造体に無理やりキャストして入れて，操る
-#define SCI0 ((volatile sci *)0xffffb0)
-#define SCI1 ((volatile sci *)0xffffb8) // シリアルコネクタは1
-#define SCI2 ((volatile sci *)0xffffc0)
+#define SCI0 ((volatile registers *)0xffffb0)
+#define SCI1 ((volatile registers *)0xffffb8) // シリアルコネクタは1
+#define SCI2 ((volatile registers *)0xffffc0)
 
 // SCIの各種レジスタの定義
 // SCIはCPUに内蔵されているのでマッピングされているアドレスは決まっている
@@ -56,7 +56,7 @@ typedef struct h8_3069f_sci
 	volatile uint8 ssr; // 0xffffbc, 送信完了/受信完了などを表す
 	volatile uint8 rdr; // 0xffffbd, 受信した１文字を読み出す
 	volatile uint8 scmr;
-} sci;
+} registers;
 
 // SMRの各ビットの定義
 // シリアルモードレジスタ
@@ -98,7 +98,12 @@ typedef struct h8_3069f_sci
 #define H8_3069F_SCI_SSR_RDRF (1 << 6) // 受信完了
 #define H8_3069F_SCI_SSR_TDRE (1 << 7) // 送信完了
 
-static volatile sci *regs[SERIAL_SCI_NUM] = {
+typedef struct _sci
+{
+	volatile registers *s;
+} sci;
+
+static volatile sci regs[SERIAL_SCI_NUM] = {
 	{SCI0},
 	{SCI1},
 	{SCI2},
@@ -127,7 +132,7 @@ static volatile sci *regs[SERIAL_SCI_NUM] = {
 // デバイス初期化
 int serial_init(int index)
 {
-	volatile sci *s = regs[index];
+	volatile registers *s = regs[index].s;
 
 	// 1. シリアル送受信と割り込みを全て無効化
 	s->scr = 0;
@@ -144,7 +149,7 @@ int serial_init(int index)
 // 送信可能か？
 int serial_is_send_enable(int index)
 {
-	volatile sci *s = regs[index];
+	volatile registers *s = regs[index].s;
 	// SSRの送信完了ビットを監視
 	return (s->ssr & H8_3069F_SCI_SSR_TDRE);
 }
@@ -160,7 +165,7 @@ int serial_is_send_enable(int index)
 // シリアルへの文字出力関数(端末変換を行わない)
 int serial_send_byte(int index, unsigned char c)
 {
-	volatile sci *s = regs[index];
+	volatile registers *s = regs[index].s;
 
 	// 1. 送信可能になるまで待つ(ビジーループ)
 	while (!serial_is_send_enable(index))
