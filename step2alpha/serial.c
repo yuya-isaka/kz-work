@@ -104,9 +104,9 @@ typedef struct _sci
 } sci;
 
 static volatile registers *regs[SERIAL_SCI_NUM] = {
-	{SCI0},
-	{SCI1},
-	{SCI2},
+	SCI0,
+	SCI1,
+	SCI2,
 };
 
 // -> reg[].sci でアクセスできるのを作成
