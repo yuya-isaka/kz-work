@@ -91,7 +91,7 @@ int serial_init(int index)
 }
 
 // 送信可能か？
-int serial_is_send_enable(int index)
+int serial_send_enable(int index)
 {
 	volatile sci *s = regs[index];
 	// SSRの送信完了ビットを監視
@@ -104,7 +104,7 @@ int serial_send_byte(int index, unsigned char c)
 	volatile sci *s = regs[index];
 
 	// 1. 送信可能になるまで待つ(ビジーループ)
-	while (!serial_is_send_enable(index))
+	while (!serial_send_enable(index))
 		;
 	// 2. 書き込みたい文字を書き込む
 	s->tdr = c;

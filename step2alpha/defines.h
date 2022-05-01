@@ -1,3 +1,5 @@
+// エイリアスなど
+
 #ifndef _DEFINES_H_INCLUDED_
 #define _DEFINES_H_INCLUDED_
 
