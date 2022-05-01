@@ -10,28 +10,32 @@
 // 汎用ポインタ型 void *　をとる
 
 // メモリを特定パターンで埋める
+// memset関数はバイト単位で処理してしまうので、2バイト、4バイトを扱うデータ型配列などではうまく機能しない
+// → 0初期化は機能する
 void *memset(void *b, int c, long len)
 {
-	char *p;
-	for (p = b; len > 0; len--) // p経由で変換(char型に対応させるため？)
-		*(p++) = c;
+	unsigned char *p; // バイト単位で処理する場合、unsigned char が都合が良い
+	for (p = b; len > 0; len--)
+		*(p++) = (c & 0xff);
 	return b;
 }
 
 // メモリのコピーを行う
+// memset同様バイト単位のコピー
 void *memcpy(void *dst, const void *src, long len)
 {
-	char *d = dst;
-	const char *s = src;
+	unsigned char *d = dst;
+	const unsigned char *s = src;
 	for (; len > 0; len--)
-		*(d++) = *(s++); // d経由で変換（char型に対応させるため？）
+		*(d++) = *(s++);
 	return dst;
 }
 
 // メモリ上のデータの比較を行う
+// memset同様バイト単位の比較
 int memcmp(const void *b1, const void *b2, long len)
 {
-	const char *p1 = b1, *p2 = b2;
+	const unsigned char *p1 = b1, *p2 = b2;
 	for (; len > 0; len--)
 	{
 		if (*p1 != *p2)
@@ -93,15 +97,17 @@ int strncmp(const char *s1, const char *s2, int len)
 	return 0;
 }
 
+//送信処理-----------------------------------------------------------------------------------
+
 // 1文字送信
-// コンソールへの文字出力関数 (コンソールへの出力はこいつを呼び出せば良くなった)
+// コンソールへの文字出力関数
 // (出力先はdefines.hで定義したSERIAL_DEFAULT_DEVICE)
 int putc(unsigned char c)
 {
+	// 端末変換
 	// C言語．．．改行コードは\n
 	// UNIXの世界...改行コードは0x0a
 	// シリアル通信...歴史的経緯により改行コードは'\r'0x0d
-	// このようなコード変換を「端末変換」という
 	if (c == '\n')
 		serial_send_byte(SERIAL_DEFAULT_DEVICE, '\r');
 	return serial_send_byte(SERIAL_DEFAULT_DEVICE, c);

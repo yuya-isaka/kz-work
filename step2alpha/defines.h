@@ -4,7 +4,7 @@
 #define _DEFINES_H_INCLUDED_
 
 #define NULL ((void *)0)		// NULLポインタの定義
-#define SERIAL_DEFAULT_DEVICE 1 // 標準のシリアルデバイス
+#define SERIAL_DEFAULT_DEVICE 1 // 標準のシリアルデバイス(SCI1)
 
 // ビット幅固の整数型
 typedef unsigned char uint8;
