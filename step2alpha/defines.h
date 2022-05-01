@@ -1,6 +1,3 @@
-// 様々な方の定義
-// 頻繁に利用する型は定義しておく（ヘッダファイルの依存関係をなくすため）
-
 #ifndef _DEFINES_H_INCLUDED_
 #define _DEFINES_H_INCLUDED_
 
