@@ -5,7 +5,7 @@
 
 // ハードウェア制御などに利用される目的の"周辺コントローラなどを内蔵しているCPU"を「マイクロコントローラ」と呼ぶ
 // SCIの数 (SCI=シリアルコントローラ)
-#define SERIAL_SCI_NUM 3
+#define SCI_NUM 3
 
 // SCIの定義
 // 先頭アドレス
@@ -67,7 +67,7 @@ typedef struct _sci
 #define SSR_RDRF (1 << 6) // 受信完了
 #define SSR_TDRE (1 << 7) // 送信完了
 
-static volatile sci *regs[SERIAL_SCI_NUM] = {
+static volatile sci *regs[SCI_NUM] = {
 	SCI0,
 	SCI1,
 	SCI2,
