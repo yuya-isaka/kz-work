@@ -101,6 +101,7 @@ long xmodem_recv(char *buf)
 			xmodem_wait(); // 受信開始されるまで送信要求を出す
 
 		// 1文字の受信
+		// 43行目のバグが発生すると、ここでの受信を待たずにNAKコードを送信してしまうバグを踏む可能性がある。
 		c = serial_recv_byte(SERIAL_DEFAULT_DEVICE);
 
 		if (c == XMODEM_EOT) // EOTを受信したら終了 (受信側③)
